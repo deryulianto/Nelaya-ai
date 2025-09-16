@@ -1,0 +1,26 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+.env
+.env.*
+# Build / dist
+build/
+dist/
+*.egg-info/
+# Jupyter/VSCode
+.ipynb_checkpoints/
+.vscode/
+# Data
+data/
+!data/README.md
+# DVC
+.dvc/
+*.dvc
+# OS
+.DS_Store
+Thumbs.db
+# Streamlit cache
+.streamlit/
