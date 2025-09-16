@@ -1,0 +1,16 @@
+name: Feature request
+description: Usulkan fitur/peningkatan
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Masalah yang ingin dipecahkan
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solusi yang diusulkan
+  - type: textarea
+    id: context
+    attributes:
+      label: Konteks tambahan

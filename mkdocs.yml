@@ -1,0 +1,7 @@
+site_name: NELAYA-AI
+theme:
+  name: material
+nav:
+  - Beranda: index.md
+  - Mulai: getting-started.md
+  - Arsitektur: architecture.md

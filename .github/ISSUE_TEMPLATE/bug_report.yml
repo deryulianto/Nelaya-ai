@@ -1,0 +1,22 @@
+name: Bug report
+description: Laporkan bug untuk diperbaiki
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: Apa yang terjadi?
+      description: Jelaskan bug, langkah reproduksi, dan ekspektasi perilaku.
+      placeholder: 'Langkah: 1..2..3..'
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Lingkungan
+      description: OS, Python, Browser/CLI, dll.
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log/Stacktrace
+      render: shell
