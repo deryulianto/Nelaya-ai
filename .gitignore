@@ -14,3 +14,7 @@ nomads.ncep.noaa.gov:9090/
 nelaya-ai-site/.git/
 nomads.ncep.noaa.gov:9090/
 .venv/
+# extra ignores
+nelaya-ai-site/.git/
+nomads.ncep.noaa.gov:9090/
+.venv/
