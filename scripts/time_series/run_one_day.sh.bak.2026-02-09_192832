@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+DAY="${1:-}"
+METRICS_ARG="${2:-sst,chlorophyll,current}"   # bisa: "sst" atau "sst,current"
+
+if [[ -z "$DAY" ]]; then
+  echo "Usage: $0 YYYY-MM-DD [metrics_csv]"
+  exit 2
+fi
+
+# Root project (../.. dari scripts/time_series)
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+LOG_DIR="${ROOT_DIR}/logs/time_series"
+mkdir -p "${LOG_DIR}"
+
+LOG_FILE="${LOG_DIR}/run_${DAY}.log"
+# log ke file + tampil di terminal
+exec > >(tee -a "${LOG_FILE}") 2>&1
+
+echo "[INFO] ROOT=${ROOT_DIR}"
+echo "[INFO] DAY=${DAY}"
+echo "[INFO] METRICS=${METRICS_ARG}"
+echo "[INFO] LOG=${LOG_FILE}"
+
+# selalu pakai python dari venv jika ada
+PY="${ROOT_DIR}/.venv/bin/python"
+if [[ ! -x "$PY" ]]; then
+  # fallback: python3 sistem
+  PY="$(command -v python3 || true)"
+fi
+if [[ -z "${PY}" ]]; then
+  echo "[FATAL] python not found. Pastikan .venv ada atau install python3."
+  exit 3
+fi
+
+echo "[INFO] PY=${PY}"
+"${PY}" -V || true
+
+# kurangi kemungkinan crash C-extension/OpenMP
+export OMP_NUM_THREADS=1
+export OPENBLAS_NUM_THREADS=1
+export MKL_NUM_THREADS=1
+export NUMEXPR_NUM_THREADS=1
+export PYTHONFAULTHANDLER=1
+export PYTHONDONTWRITEBYTECODE=1
+
+# config: pakai env CFG kalau ada, kalau tidak coba cari otomatis
+CFG="${CFG:-}"
+if [[ -z "${CFG}" ]]; then
+  for c in \
+    "${ROOT_DIR}/config/time_series.json" \
+    "${ROOT_DIR}/config/time_series_aceh.json" \
+    "${ROOT_DIR}/config/time_series_banda_aceh_aceh_besar.json" \
+    "${ROOT_DIR}/scripts/time_series/config.json" \
+    "${ROOT_DIR}/scripts/time_series/time_series.json"
+  do
+    if [[ -f "$c" ]]; then CFG="$c"; break; fi
+  done
+fi
+if [[ -z "${CFG}" || ! -f "${CFG}" ]]; then
+  echo "[FATAL] CFG tidak ditemukan. Set dulu, contoh:"
+  echo "  export CFG=/home/coastalai/NELAYA-AI-LAB/config/time_series_aceh.json"
+  exit 4
+fi
+
+echo "[INFO] CFG=${CFG}"
+
+IFS=',' read -r -a METRICS <<< "${METRICS_ARG}"
+
+run_step() {
+  local metric="$1"
+  local step="$2"   # fetch|export|update
+  local script="$3"
+
+  # retry hanya untuk fetch (karena kadang download error/segfault)
+  local tries=1
+  local max_tries=1
+  if [[ "$step" == "fetch" ]]; then
+    max_tries=3
+  fi
+
+  for ((i=1; i<=max_tries; i++)); do
+    echo "  [TRY ${i}/${max_tries}] ${step}"
+    set +e
+    "${PY}" "scripts/time_series/${script}" --config "${CFG}" --var "${metric}" --date "${DAY}"
+    rc=$?
+    set -e
+
+    if [[ $rc -eq 0 ]]; then
+      return 0
+    fi
+
+    # 139 = SIGSEGV
+    if [[ $rc -eq 139 ]]; then
+      echo "  [SEGV] ${step} segfault untuk ${metric} ${DAY}"
+    else
+      echo "  [WARN] ${step} gagal rc=${rc} untuk ${metric} ${DAY}"
+    fi
+
+    # kalau bukan fetch, jangan retry
+    if [[ "$step" != "fetch" ]]; then
+      return $rc
+    fi
+
+    sleep 2
+  done
+
+  return 1
+}
+
+any_fail=0
+
+for metric in "${METRICS[@]}"; do
+  metric="$(echo "$metric" | xargs)"  # trim
+  [[ -z "$metric" ]] && continue
+
+  echo "[METRIC] ${metric} @ ${DAY}"
+
+  if ! run_step "${metric}" "fetch" "01_fetch_daily.py"; then
+    echo "  [FAIL] fetch permanently failed: ${metric} ${DAY}"
+    any_fail=1
+    echo "[WARN] metric ${metric} failed (rc!=0) untuk ${DAY} → lanjut metric berikutnya"
+    continue
+  fi
+
+  if ! run_step "${metric}" "export" "02_export_csv_grid.py"; then
+    echo "  [WARN] export gagal: ${metric} ${DAY} → lanjut update (kalau bisa)"
+    any_fail=1
+  fi
+
+  if ! run_step "${metric}" "update" "03_update_series_mean.py"; then
+    echo "  [WARN] update series gagal: ${metric} ${DAY}"
+    any_fail=1
+  fi
+done
+
+if [[ $any_fail -eq 0 ]]; then
+  echo "[DONE] ${DAY} OK (all metrics)"
+  exit 0
+else
+  echo "[DONE] ${DAY} selesai, ada metric yang gagal (lihat log)."
+  exit 1
+fi

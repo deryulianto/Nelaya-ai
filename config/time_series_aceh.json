@@ -1,0 +1,16 @@
+{
+  "region_id": "banda_aceh_aceh_besar",
+  "region_name": "Banda Aceh - Aceh Besar",
+  "bbox": {
+    "lon_min": 94.95,
+    "lon_max": 95.85,
+    "lat_min": 5.1,
+    "lat_max": 5.95
+  },
+  "out_dir": "data/time_series/aceh/banda_aceh_aceh_besar",
+  "vars": {
+    "sst": {},
+    "chlorophyll": {},
+    "current": {}
+  }
+}

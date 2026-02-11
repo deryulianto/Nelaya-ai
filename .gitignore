@@ -18,3 +18,8 @@ nomads.ncep.noaa.gov:9090/
 nelaya-ai-site/.git/
 nomads.ncep.noaa.gov:9090/
 .venv/
+
+# ignore env & caches
+.env
+__pycache__/
+*.pyc

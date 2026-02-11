@@ -1,0 +1,49 @@
+region: "Banda Aceh - Aceh Besar"
+base_dir: "data/time_series/aceh/banda_aceh_aceh_besar"
+raw_dirname: "raw"
+daily_dirname: "daily"
+series_dirname: "series"
+source_name: "Copernicus Marine Service (CMEMS)"
+
+default_lag_days: 1
+
+bbox:
+  min_lon: 92
+  max_lon: 99
+  min_lat: 1
+  max_lat: 7
+
+vars:
+  sst:
+    dataset_id_my: "cmems_mod_glo_phy_my_0.083deg_P1D-m"
+    dataset_id_nrt: "cmems_mod_glo_phy_anfc_0.083deg_P1D-m"
+    var_name: "thetao"
+    unit: "degC"
+
+  chlorophyll:
+    dataset_id_my: "cmems_obs-oc_glo_bgc-plankton_my_l3-multi-4km_P1D"
+    dataset_id_nrt: "cmems_obs-oc_glo_bgc-plankton_nrt_l3-multi-4km_P1D"
+    var_name: "CHL"
+    unit: "mg m-3"
+
+  current:
+    dataset_id_my: "cmems_mod_glo_phy_my_0.083deg_P1D-m"
+    dataset_id_nrt: "cmems_mod_glo_phy_anfc_0.083deg_P1D-m"
+    var_u: "uo"
+    var_v: "vo"
+    unit: "m s-1"
+
+  temp50:
+    dataset_id: "cmems_mod_glo_phy-thetao_anfc_0.083deg_P1D-m"
+    var_name: "thetao"
+    depth_m: 50
+    unit: "degC"
+
+  temp3d:
+    dataset_id: "cmems_mod_glo_phy-thetao_anfc_0.083deg_P1D-m"
+    var_name: "thetao"
+    unit: "degC"
+    # ambil profil 0–200 m
+    min_depth: 0
+    max_depth: 200
+

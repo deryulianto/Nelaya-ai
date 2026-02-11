@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd /home/coastalai/NELAYA-AI-LAB
+
+# jalankan untuk kemarin (UTC) agar data sudah tersedia
+DAY="$(date -u -d "yesterday" +%F)"
+
+echo "[INFO] daily update for ${DAY}"
+./scripts/time_series/run_one_day.sh "${DAY}"
