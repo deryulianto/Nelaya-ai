@@ -39,3 +39,9 @@ nelaya-ai-site/.git/
 nomads.ncep.noaa.gov:9090/
 .venv/
 >>>>>>> 37033569 (Initial commit: workflows + scripts (fix nested git dir))
+
+# python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
