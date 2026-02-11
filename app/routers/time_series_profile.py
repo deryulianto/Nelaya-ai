@@ -4,14 +4,14 @@ from datetime import datetime
 from pathlib import Path
 import csv
 from typing import Any, Dict, List, Optional
-
 from fastapi import APIRouter, Query
+from app.routers.time_series_profile import temp_profile
 
 ROOT = Path(__file__).resolve().parents[2]
 BASE = ROOT / "data" / "time_series" / "aceh" / "banda_aceh_aceh_besar" / "temp_profile" / "series"
 SERIES = BASE / "temp_profile_daily_profile.csv"
 
-router = APIRouter(prefix="/api/v1/time-series", tags=["TimeSeries"])
+router = APIRouter(prefix="/api/v1/time-series", tags=["FGI-TimeSeries"])
 
 
 def _parse_date(s: str) -> datetime:
@@ -20,11 +20,10 @@ def _parse_date(s: str) -> datetime:
 
 @router.get("/temp-profile")
 def temp_profile(
-    date: Optional[str] = Query(default=None, description="YYYY-MM-DD, default: latest"),
+    date: Optional[str] = Query(default=None),
     max_depth: float = Query(default=200.0),
 ) -> Dict[str, Any]:
-    if not SERIES.exists():
-        return {"region": "Banda Aceh - Aceh Besar", "date": date, "points": [], "error": "series_not_found"}
+     return temp_profile(date=date, max_depth=max_depth)
 
     rows: List[Dict[str, Any]] = []
     all_dates: List[str] = []
