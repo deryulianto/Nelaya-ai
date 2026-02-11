@@ -20,7 +20,11 @@ from app.services.user_store import init_db
 from app.routers.auth import router as auth_router
 from app.routers.me import router as me_router
 from app.routers.time_series_profile import router as ts_profile_router
->>>>>>> 0dc80102 (time-series: depth temp profile chart + thermocline/MLD tooltip polish)
+HEAD
+0dc80102 (time-series: depth temp profile chart + thermocline/MLD tooltip polish)
+
+from app.routers.fgi_time_series_profile import router as fgi_ts_profile_router
+f2877372 (api: add /api/v1/fgi/time-series/temp-profile alias)
 
 app = FastAPI()
 app.include_router(fgi.router, prefix="/api/v1/fgi")
@@ -30,9 +34,8 @@ app.include_router(fgi.router)
 
 @app.get("/health")
 def health():
-<<<<<<< HEAD
+HEAD
     return {"ok": True, "service": "nelaya-ai", "version": "0.9.1"}
-=======
     return {"ok": True}
 
 # mount routers (router masing-masing sudah punya prefix /api/v1)
@@ -52,5 +55,6 @@ app.include_router(fgi_map_router)
 app.include_router(earth.router)
 app.include_router(time_series_router)
 app.include_router(ts_profile_router)
+app.include_router(fgi_ts_profile_router)
 
->>>>>>> 0dc80102 (time-series: depth temp profile chart + thermocline/MLD tooltip polish)
+0dc80102 (time-series: depth temp profile chart + thermocline/MLD tooltip polish)
