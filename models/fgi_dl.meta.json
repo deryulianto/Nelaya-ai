@@ -1,0 +1,13 @@
+{
+    "model_name": "NELAYA-AI FGI v0.9",
+    "trained_on": "2025-10-16 10:03:32",
+    "input_features": [
+        "temp",
+        "sal",
+        "chl"
+    ],
+    "target": "FGI",
+    "architecture": "SimpleNet(3\u21928\u21921)",
+    "loss": 0.036576565355062485,
+    "data_used": 6
+}

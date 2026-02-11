@@ -1,0 +1,9 @@
+{
+  "features": [
+    "temp",
+    "sal",
+    "chl"
+  ],
+  "target": "fgi_label",
+  "weight": "sample_weight"
+}

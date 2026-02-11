@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 # Python
 __pycache__/
@@ -24,3 +25,17 @@ data/
 Thumbs.db
 # Streamlit cache
 .streamlit/
+=======
+data/
+logs/
+data/tmp/
+*.nc
+*.parquet
+*.csv
+!data/meta/
+!data/meta/*.csv
+# extra ignores
+nelaya-ai-site/.git/
+nomads.ncep.noaa.gov:9090/
+.venv/
+>>>>>>> 37033569 (Initial commit: workflows + scripts (fix nested git dir))

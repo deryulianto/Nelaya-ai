@@ -1,0 +1,3 @@
+# Sumber data (ubah sesuai yang tersedia di D:)
+raw_samples: /mnt/d/NELAYA-AI-DATA/training_dataset_with_pseudo.csv
+grid_features: /mnt/d/NELAYA-AI-DATA/processed/grid_features.parquet

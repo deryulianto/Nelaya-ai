@@ -1,0 +1,187 @@
+# -*- coding: utf-8 -*-
+import os, zipfile, json, pathlib, textwrap
+
+BASE = pathlib.Path("NELAYA-AI-LAB_v0.9.1")
+dirs = [
+    "app/core", "app/models", "app/utils", "app/routers",
+    "app/static/data", "app/static/assets", "app/templates",
+    "dashboard/modules", "dashboard/assets", "notebooks"
+]
+
+def write(path, content):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(textwrap.dedent(content), encoding="utf-8")
+
+# === create dirs ===
+for d in dirs:
+    os.makedirs(BASE / d, exist_ok=True)
+
+# ============ main FastAPI ============
+write(BASE / "app/main.py", 
+from fastapi import FastAPI
+from app.routers import physics_router
+
+app = FastAPI(title="NELAYA-AI-LAB v0.9.1 Physics Hybrid")
+app.include_router(physics_router.router)
+
+@app.get("/")
+def home():
+    return {"NELAYA-AI-LAB": "v0.9.1", "status": "Running"}
+)
+
+# ============ router ============
+write(BASE / "app/routers/physics_router.py", 
+from fastapi import APIRouter
+router = APIRouter(prefix="/physics", tags=["Physics-AI"])
+
+@router.get("/status")
+def get_status():
+    return {"NELAYA-AI-LAB Physics": "Ready", "version": "v0.9.1"}
+)
+
+# ============ physics core ============
+write(BASE / "app/core/physics.py", 
+import torch
+def spatial_gradient(field, dx, dy):
+    dphidx = (field[:, :, :, 2:] - field[:, :, :, :-2]) / (2 * dx)
+    dphidy = (field[:, :, 2:, :] - field[:, :, :-2, :]) / (2 * dy)
+    dphidx = dphidx[:, :, 1:-1, :]
+    dphidy = dphidy[:, :, :, 1:-1]
+    return dphidx, dphidy
+def temporal_gradient(field, dt):
+    return (field[2:, ...] - field[:-2, ...]) / (2 * dt)
+)
+
+write(BASE / "app/core/loss_physics.py", 
+import torch
+from app.core.physics import spatial_gradient, temporal_gradient
+def physics_loss(phi, u, v, S, dx, dy, dt):
+    dphidt = temporal_gradient(phi, dt)
+    dphidx, dphidy = spatial_gradient(phi[1:-1], dx, dy)
+    residual = dphidt + (u * dphidx + v * dphidy) - S[1:-1]
+    return torch.mean(residual ** 2)
+)
+
+# ============ model ============
+write(BASE / "app/models/hybrid_model.py", 
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from app.core.loss_physics import physics_loss
+
+class HybridOceanNet(nn.Module):
+    def __init__(self, in_channels=1, hidden_dim=32):
+        super().__init__()
+        self.cnn = nn.Sequential(
+            nn.Conv2d(in_channels, 16, 3, padding=1), nn.ReLU(),
+            nn.Conv2d(16, hidden_dim, 3, padding=1), nn.ReLU()
+        )
+        self.lstm = nn.LSTM(hidden_dim, hidden_dim, batch_first=True)
+        self.output = nn.Conv2d(hidden_dim, 1, 1)
+
+    def forward(self, x):
+        batch, time, c, h, w = x.shape
+        x = x.view(batch * time, c, h, w)
+        f = self.cnn(x)
+        f_mean = f.mean(dim=[2, 3])
+        f_seq = f_mean.view(batch, time, -1)
+        f_seq, _ = self.lstm(f_seq)
+        out = self.output(f[:, :, :, :].mean(dim=0, keepdim=True))
+        return out
+
+def compute_total_loss(phi, u, v, S, model_out, dx, dy, dt):
+    loss_data = F.mse_loss(model_out, phi[:, -1])
+    loss_phys = physics_loss(phi, u, v, S, dx, dy, dt)
+    return loss_data + 0.1 * loss_phys
+)
+
+# ============ utils ============
+write(BASE / "app/utils/grid_operators.py",
+import numpy as np
+def create_velocity_field(shape, pattern="gyre"):
+    nx, ny = shape
+    x, y = np.meshgrid(np.linspace(-1,1,nx), np.linspace(-1,1,ny))
+    if pattern == "gyre":
+        u = -y; v = x
+    else:
+        u = np.ones_like(x); v = np.zeros_like(y)
+    return u, v
+)
+
+write(BASE / "app/utils/data_loader.py",
+import xarray as xr
+def load_copernicus_sample(var="sst"):
+    path = f"app/static/data/copernicus_{var}_sample.nc"
+    return xr.open_dataset(path)
+)
+
+# ============ dummy NetCDF ============
+import numpy as np
+import xarray as xr
+time = np.arange(0,10)
+lat = np.linspace(-1,1,32)
+lon = np.linspace(-1,1,32)
+data = np.random.rand(len(time),len(lat),len(lon)).astype("float32")
+xr.Dataset({"sst": (["time","lat","lon"], data)}).to_netcdf(BASE/"app/static/data/copernicus_sst_sample.nc")
+xr.Dataset({"chl": (["time","lat","lon"], data*0.8)}).to_netcdf(BASE/"app/static/data/copernicus_chl_sample.nc")
+
+# ============ dashboard ============
+write(BASE / "dashboard/Home.py",
+import streamlit as st
+from dashboard.modules.viewer_residual import show_residual_map
+st.set_page_config(page_title="NELAYA-AI-LAB", layout="wide")
+st.sidebar.title("NELAYA-AI-LAB v0.9.1")
+st.sidebar.info("Physics Hybrid with Copernicus Sample")
+show_residual_map()
+)
+
+write(BASE / "dashboard/modules/viewer_residual.py",
+import streamlit as st, xarray as xr, torch
+from app.models.hybrid_model import HybridOceanNet
+from app.core.loss_physics import physics_loss
+
+def show_residual_map():
+    st.title("Physics Residual Viewer 🌊")
+    ds = xr.open_dataset("app/static/data/copernicus_sst_sample.nc")
+    sst = torch.tensor(ds["sst"].values).unsqueeze(0).unsqueeze(2).float()
+    model = HybridOceanNet()
+    pred = model(sst)
+    loss = physics_loss(sst, torch.zeros_like(pred), torch.zeros_like(pred),
+                        torch.zeros_like(pred), dx=0.1, dy=0.1, dt=1.0)
+    st.metric("Physics Residual (MSE)", f"{loss.item():.6f}")
+)
+
+# ============ requirements ============
+write(BASE / "requirements.txt", 
+fastapi
+uvicorn
+streamlit
+torch
+xarray
+netCDF4
+numpy
+matplotlib
+pandas
+plotly
+)
+
+# ============ README ============
+write(BASE / "README.md",
+# NELAYA-AI-LAB v0.9.1 - Physics Hybrid 🌊🤖
+Hybrid CNN-LSTM-PDE model integrating FastAPI + Streamlit + Copernicus sample.
+Run:
+  uvicorn app.main:app --reload --port 8000
+  streamlit run dashboard/Home.py
+)
+
+# ============ Zip ============
+zipname = "NELAYA-AI-LAB_v0.9.1_PhysicsHybrid.zip"
+with zipfile.ZipFile(zipname, "w", zipfile.ZIP_DEFLATED) as zf:
+    for folder, _, files in os.walk(BASE):
+        for f in files:
+            fp = pathlib.Path(folder)/f
+            zf.write(fp, fp.relative_to(BASE.parent))
+print(f"✅ Created {zipname} successfully!")
+
+
+
