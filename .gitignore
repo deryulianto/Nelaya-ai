@@ -24,3 +24,6 @@ nomads.ncep.noaa.gov:9090/
 __pycache__/
 *.pyc
 nelaya_ai_mobile/build/
+
+__pycache__/
+*.pyc
