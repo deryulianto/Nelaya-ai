@@ -27,3 +27,5 @@ nelaya_ai_mobile/build/
 
 __pycache__/
 *.pyc
+__pycache__/
+*.pyc
