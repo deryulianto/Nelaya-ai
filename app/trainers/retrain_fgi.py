@@ -1,9 +1,4 @@
-"""
-app/trainers/retrain_fgi.py
------------------------------------
-Modul ini bertugas untuk melatih ulang model FGI (Fish Growth Intelligence)
-berdasarkan data terbaru yang tersimpan di logs/inference_log.csv.
-"""
+// app/trainers/retrain_fgi.py
 
 from pathlib import Path
 import pandas as pd
@@ -43,9 +38,7 @@ class SimpleNet(nn.Module):
 
 # === Fungsi utama retraining ===
 def retrain_model():
-    """
-    Melatih ulang model FGI menggunakan data log inferensi terbaru.
-    """
+    
     if not LOG_FILE.exists():
         return "❌ Tidak ditemukan file log untuk retraining."
 

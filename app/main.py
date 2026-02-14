@@ -1,60 +1,78 @@
-from fastapi import FastAPI
-<<<<<<< HEAD
-from app.routers import fgi
-=======
+from __future__ import annotations
 
-from app.routers.fgi import router as fgi_router
-from app.routers.signals import router as signals_router
-from app.routers.fgi_tiles import router as fgi_tiles_router
-from app.routers.waves import router as waves_router
-from app.routers.surf import router as surf_router
-from app.routers.data import router as data_router
-from app.routers.fgi_cache import router as fgi_cache_router
-from app.routers.fgi_map_build import router as fgi_map_router
-from app.routers.ocean_memory import router as ocean_memory_router
-from app.routers.fgi_map import router as fgi_map_router
-from app.routers import earth
-from app.routers.time_series import router as time_series_router
+import os
+import logging
+import importlib
 from fastapi import FastAPI
-from app.services.user_store import init_db
-from app.routers.auth import router as auth_router
-from app.routers.me import router as me_router
-from app.routers.time_series_profile import router as ts_profile_router
-HEAD
-0dc80102 (time-series: depth temp profile chart + thermocline/MLD tooltip polish)
 
-from app.routers.fgi_time_series_profile import router as fgi_ts_profile_router
-f2877372 (api: add /api/v1/fgi/time-series/temp-profile alias)
+log = logging.getLogger("nelaya")
+STRICT_IMPORT = os.getenv("NELAYA_STRICT_IMPORT", "0") == "1"
+
+
+def opt_router(module_path: str, attr: str = "router"):
+    """
+    Import router dengan log.
+    - STRICT: raise jika gagal (buat dev)
+    - non-STRICT: return None tapi tulis error (buat prod)
+    """
+    try:
+        mod = importlib.import_module(module_path)
+        return getattr(mod, attr)
+    except Exception as e:
+        log.exception("❌ Router import failed: %s (%s)", module_path, e)
+        if STRICT_IMPORT:
+            raise
+        return None
+
 
 app = FastAPI()
-app.include_router(fgi.router, prefix="/api/v1/fgi")
 
-# daftar router
-app.include_router(fgi.router)
 
 @app.get("/health")
 def health():
-HEAD
     return {"ok": True, "service": "nelaya-ai", "version": "0.9.1"}
-    return {"ok": True}
 
-# mount routers (router masing-masing sudah punya prefix /api/v1)
-init_db()
-app.include_router(auth_router)
-app.include_router(me_router)
-app.include_router(fgi_router)
-app.include_router(signals_router)
-app.include_router(fgi_tiles_router)
-app.include_router(waves_router)
-app.include_router(surf_router)
-app.include_router(data_router)
-app.include_router(fgi_cache_router)
-app.include_router(fgi_map_router)
-app.include_router(ocean_memory_router)
-app.include_router(fgi_map_router)
-app.include_router(earth.router)
-app.include_router(time_series_router)
-app.include_router(ts_profile_router)
-app.include_router(fgi_ts_profile_router)
 
-0dc80102 (time-series: depth temp profile chart + thermocline/MLD tooltip polish)
+def mount(module_path: str, *, prefix: str = "", attr: str = "router"):
+    r = opt_router(module_path, attr)
+    if r is not None:
+        app.include_router(r, prefix=prefix)
+        log.info("✅ Mounted: %s (prefix='%s')", module_path, prefix)
+    else:
+        log.warning("⚠️ Skipped: %s", module_path)
+
+
+# ===== ROUTERS (urut jelas) =====
+# Auth & user
+mount("app.routers.auth", prefix="")
+mount("app.routers.me", prefix="")
+
+# FGI: mount 2 jalur (native + /api/v1)
+mount("app.routers.fgi", prefix="")
+mount("app.routers.fgi", prefix="/api/v1")
+
+# Core signals & products
+mount("app.routers.signals", prefix="")
+mount("app.routers.earth", prefix="")
+mount("app.routers.waves", prefix="")
+mount("app.routers.surf", prefix="")
+mount("app.routers.data", prefix="")
+
+# FGI addons
+mount("app.routers.fgi_cache", prefix="")
+mount("app.routers.fgi_map", prefix="")
+mount("app.routers.ocean_memory", prefix="")
+mount("app.routers.fgi_time_series", prefix="")         # /api/v1/fgi/time-series/*
+mount("app.routers.fgi_time_series_profile", prefix="") # /api/v1/fgi/time-series/temp-profile
+
+# Time series general
+mount("app.routers.time_series", prefix="")
+mount("app.routers.time_series_profile", prefix="")     # /api/v1/time-series/temp-profile (alias)
+
+
+# Optional init_db
+try:
+    from app.services.user_store import init_db  # type: ignore
+    init_db()
+except Exception:
+    pass

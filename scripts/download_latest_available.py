@@ -1,70 +1,176 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
-import argparse
 import os
+import sys
 import subprocess
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from datetime import datetime, date, timedelta, timezone
+import argparse
 
 ROOT = Path(__file__).resolve().parents[1]
+RAW_BASE = ROOT / "data" / "raw" / "aceh_simeulue"
 
-def utc_today() -> datetime:
-    return datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+KINDS = ["sst_nrt", "chl_nrt", "wind_nrt", "wave_anfc", "ssh_anfc", "sal_anfc"]
 
-def run(cmd: list[str]) -> tuple[int, str]:
-    p = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-    return p.returncode, p.stdout
+MIN_BYTES_DEFAULT = 10_000
 
-def ensure_parent(path: Path) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
 
-def try_download(kind: str, day: datetime, out_nc: Path) -> tuple[bool, str]:
+def _is_ok_file(p: Path, min_bytes: int = MIN_BYTES_DEFAULT) -> bool:
+    try:
+        return p.exists() and p.is_file() and p.stat().st_size >= min_bytes
+    except Exception:
+        return False
+
+
+def utc_today() -> date:
+    return datetime.now(timezone.utc).date()
+
+
+def ymd(d: date) -> str:
+    return d.isoformat()
+
+
+def default_out_path(kind: str, d: date) -> Path:
+    y = f"{d.year:04d}"
+    m = f"{d.month:02d}"
+    day = ymd(d)
+
+    if kind in ("sst_nrt", "chl_nrt", "wind_nrt"):
+        fname = f"{kind}_aceh_{day}.nc"
+        return RAW_BASE / kind / y / m / fname
+
+    if kind == "wave_anfc":
+        return RAW_BASE / kind / y / m / f"wave_aceh_{day}.nc"
+
+    if kind == "ssh_anfc":
+        return RAW_BASE / kind / y / m / f"ssh_aceh_{day}.nc"
+
+    if kind == "sal_anfc":
+        return RAW_BASE / kind / y / m / f"sal_aceh_{day}.nc"
+
+    return RAW_BASE / kind / y / m / f"{kind}_aceh_{day}.nc"
+
+
+def _run_download(kind: str, d: date, out: Path, verbose: bool = False) -> tuple[bool, str]:
     """
-    Delegate actual download to copernicusmarine CLI using an env-var based recipe
-    or pre-defined dataset selection inside bash script.
-    We keep this python generic: it only calls the bash script with DAY/KIND.
+    Jalankan downloader 1 kali untuk (kind, d) ke file out.
+    Return (ok, log_text).
     """
-    ensure_parent(out_nc)
+    out.parent.mkdir(parents=True, exist_ok=True)
+
     env = os.environ.copy()
     env["NELAYA_KIND"] = kind
-    env["NELAYA_DAY"] = day.date().isoformat()
-    env["NELAYA_OUT"] = str(out_nc)
+    env["NELAYA_DAY"] = ymd(d)
+    env["NELAYA_OUT"] = str(out)
 
-    # This helper bash script should exist (we'll create if missing)
-    helper = ROOT / "scripts" / "_cmems_download_one.sh"
-    if not helper.exists():
-        return False, f"[MISS] helper not found: {helper}"
+    r = subprocess.run(
+        ["bash", "scripts/_cmems_download_one.sh"],
+        cwd=str(ROOT),
+        env=env,
+        text=True,
+        capture_output=True,
+    )
 
-    code, out = run(["/usr/bin/bash", str(helper)])
-    ok = (code == 0) and out_nc.exists() and out_nc.stat().st_size > 0
-    return ok, out
+    log = ((r.stdout or "") + ("\n" if r.stdout and r.stderr else "") + (r.stderr or "")).strip()
 
-def main() -> int:
+    # sukses kalau exit=0 dan file valid
+    if r.returncode == 0 and _is_ok_file(out):
+        return True, log
+
+    # kalau file kecil/partial, bersihkan
+    try:
+        if out.exists() and out.stat().st_size < MIN_BYTES_DEFAULT:
+            out.unlink()
+    except Exception:
+        pass
+
+    # kalau verbose, kembalikan log biar kelihatan kenapa gagal
+    return False, log
+
+
+def find_latest(
+    kind: str,
+    base_day: date,
+    max_back: int,
+    out_override: str | None = None,
+    verbose: bool = False,
+) -> Path | None:
+    """
+    Cari data terbaru dengan mundur sampai max_back hari.
+    Prioritas: cache lokal -> kalau sudah ada dan valid, HIT tanpa download.
+    """
+    for i in range(max_back + 1):
+        d = base_day - timedelta(days=i)
+
+        out = Path(out_override) if out_override else default_out_path(kind, d)
+
+        # 0) CACHE HIT: kalau file sudah ada & valid, jangan download ulang
+        if _is_ok_file(out):
+            print(f"[HIT] local cache exists: {out.as_posix()} ({out.stat().st_size} bytes)")
+            return out
+
+        print(f"[TRY] {kind} day={ymd(d)} -> {out.as_posix()}")
+
+        ok, log = _run_download(kind, d, out, verbose=verbose)
+        if ok:
+            print(f"[OK]  {kind} -> {out.as_posix()}")
+            return out
+
+        print(f"[MISS] {kind} not available for {ymd(d)} (try previous day)")
+        if verbose and log:
+            print("----- downloader log (tail) -----")
+            # biar tidak kebanjiran, tampilkan tail 80 baris saja
+            lines = log.splitlines()
+            tail = "\n".join(lines[-80:])
+            print(tail)
+            print("----- end log -----")
+
+    return None
+
+
+def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--kind", required=True, help="sst_nrt|chl_nrt|wind_nrt|wave_anfc|ssh_anfc|sal_anfc|...")
-    ap.add_argument("--out", required=True, help="output .nc path")
-    ap.add_argument("--max-back", type=int, default=4, help="max days to step back when dataset not ready")
+    ap.add_argument("--day", default="", help="YYYY-MM-DD (default: today UTC)")
+    ap.add_argument("--max-back", type=int, default=7)
+    ap.add_argument("--kind", default="", help="run only one kind")
+    ap.add_argument(
+        "--out",
+        default="",
+        help="override output path (advanced). If set, file will be written here (no per-day naming).",
+    )
+    ap.add_argument("--verbose", action="store_true", help="print downloader log when MISS")
     args = ap.parse_args()
 
-    kind = args.kind
-    out_nc = Path(args.out)
+    base_day = utc_today()
+    if args.day:
+        base_day = datetime.strptime(args.day, "%Y-%m-%d").date()
 
-    base = utc_today()
-    logs: list[str] = []
-    for back in range(0, args.max_back + 1):
-        day = base - timedelta(days=back)
-        logs.append(f"[TRY] {kind} day={day.date().isoformat()} -> {out_nc}")
-        ok, out = try_download(kind, day, out_nc)
-        logs.append(out.strip())
-        if ok:
-            logs.append(f"[OK] {kind} saved: {out_nc}")
-            print("\n".join([x for x in logs if x]))
-            return 0
-        logs.append(f"[MISS] {kind} not available for {day.date().isoformat()} (try previous day)")
+    kinds = [args.kind] if args.kind else KINDS
 
-    print("\n".join([x for x in logs if x]))
-    return 2
+    # validasi kind supaya tidak “MISS halu”
+    for k in kinds:
+        if k not in KINDS:
+            print(f"[ERROR] unknown kind: {k}. Allowed: {', '.join(KINDS)}")
+            sys.exit(2)
+
+    out_override = args.out.strip() or None
+
+    ok_any = False
+    for k in kinds:
+        print(f"\n---- {k} ----")
+        p = find_latest(
+            k,
+            base_day=base_day,
+            max_back=int(args.max_back),
+            out_override=out_override,
+            verbose=bool(args.verbose),
+        )
+        if p:
+            ok_any = True
+
+    print("\n[DONE] all downloads attempted.")
+    sys.exit(0 if ok_any else 2)
+
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()
