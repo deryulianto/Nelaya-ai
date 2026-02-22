@@ -5,6 +5,8 @@ import logging
 import importlib
 from fastapi import FastAPI
 
+
+
 # -----------------------------------------------------------------------------
 # Logging
 # -----------------------------------------------------------------------------
@@ -16,19 +18,13 @@ log = logging.getLogger("nelaya")
 
 STRICT_IMPORT = os.getenv("NELAYA_STRICT_IMPORT", "0") == "1"
 
-# -----------------------------------------------------------------------------
-# App (buat app dulu, baru mount router)
-# -----------------------------------------------------------------------------
-app = FastAPI(title="NELAYA-AI API", version="0.9.1")
 
-@app.get("/health")
-def health():
-    return {"ok": True, "service": "nelaya-ai", "version": "0.9.1"}
-
-# -----------------------------------------------------------------------------
-# Router mounting helper
-# -----------------------------------------------------------------------------
 def opt_router(module_path: str, attr: str = "router"):
+    """
+    Import router dengan log.
+    - STRICT: raise jika gagal (buat dev)
+    - non-STRICT: return None tapi tulis error (buat prod)
+    """
     try:
         mod = importlib.import_module(module_path)
         return getattr(mod, attr)
@@ -38,6 +34,7 @@ def opt_router(module_path: str, attr: str = "router"):
             raise
         return None
 
+
 def mount(module_path: str, *, prefix: str = "", attr: str = "router"):
     r = opt_router(module_path, attr)
     if r is not None:
@@ -46,32 +43,52 @@ def mount(module_path: str, *, prefix: str = "", attr: str = "router"):
     else:
         log.warning("⚠️ Skipped: %s", module_path)
 
+
+# -----------------------------------------------------------------------------
+# App
+# -----------------------------------------------------------------------------
+app = FastAPI(title="NELAYA-AI API", version="0.9.1")
+
+
+@app.get("/health")
+def health():
+    return {"ok": True, "service": "nelaya-ai", "version": "0.9.1"}
+
+
 # -----------------------------------------------------------------------------
 # ROUTERS (urut jelas)
 # -----------------------------------------------------------------------------
+# Auth & user
 mount("app.routers.auth", prefix="")
 mount("app.routers.me", prefix="")
 
+# FGI: mount 2 jalur (native + /api/v1)
 mount("app.routers.fgi", prefix="")
 mount("app.routers.fgi", prefix="/api/v1")
 
+# Core signals & products
 mount("app.routers.signals", prefix="")
 mount("app.routers.earth", prefix="")
 mount("app.routers.waves", prefix="")
-# mount("app.routers.surf", prefix="")
+mount("app.routers.surf", prefix="")
 mount("app.routers.surf_v1", prefix="")
 mount("app.routers.data", prefix="")
 
+# FGI addons
 mount("app.routers.fgi_cache", prefix="")
-mount("app.routers.fgi_map", prefix="")
-mount("app.routers.fgi_map_grid", prefix="")
-mount("app.routers.fgi_recommendations", prefix="")
+mount("app.routers.fgi_map", prefix="")        # /api/v1/fgi/map/*
+mount("app.routers.fgi_map_grid", prefix="")   # /api/v1/fgi/map-grid/*  ✅ ini yang baru
+mount("app.routers.fgi_recommendations", prefix="")  # ✅ /api/v1/fgi/recommendations/*
 mount("app.routers.ocean_memory", prefix="")
-mount("app.routers.fgi_time_series", prefix="")
-mount("app.routers.fgi_time_series_profile", prefix="")
+mount("app.routers.fgi_time_series", prefix="")         # /api/v1/fgi/time-series/*
+mount("app.routers.fgi_time_series_profile", prefix="") # /api/v1/fgi/time-series/temp-profile
 
+
+
+
+# Time series general
 mount("app.routers.time_series", prefix="")
-mount("app.routers.time_series_profile", prefix="")
+mount("app.routers.time_series_profile", prefix="")     # /api/v1/time-series/temp-profile (alias)
 
 # Optional init_db
 try:

@@ -275,8 +275,54 @@ def retrain_from_log():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ==== Score placeholder ====
+# ==== Score (REAL: pakai model internal) ====
 @router.post("/score")
 def score(payload: dict):
-    # ...hitung skor (placeholder)...
-    return {"score": 0.0, "ok": True}
+    if not TORCH_AVAILABLE or MODEL is None or SCALER is None:
+        raise HTTPException(status_code=503, detail="FGI model/scaler belum siap.")
+
+    def pick(keys):
+        for k in keys:
+            if k in payload and payload[k] is not None:
+                return payload[k]
+        return None
+
+    # Model FGI kamu dilatih pakai (temp, sal, chl)
+    # Kita terima alias dari daily_fgi: sst_c, sal_psu, chl_mg_m3
+    temp = pick(["temp", "sst_c", "sst", "temperature", "thetao"])
+    sal  = pick(["sal", "sal_psu", "salinity", "so"])
+    chl  = pick(["chl", "chl_mg_m3", "CHL", "chlorophyll"])
+
+    # support kalau client kirim vector
+    feats = payload.get("features") or payload.get("x")
+    if (temp is None or sal is None or chl is None) and isinstance(feats, list) and len(feats) >= 3:
+        temp, sal, chl = feats[0], feats[1], feats[2]
+
+    if temp is None or sal is None or chl is None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Missing features. Need (temp/sal/chl) or aliases (sst_c/sal_psu/chl_mg_m3). Got keys={list(payload.keys())}",
+        )
+
+    try:
+        X = np.array([[float(temp), float(sal), float(chl)]], dtype=np.float32)
+        X_scaled = SCALER.transform(X)
+        X_tensor = torch.tensor(X_scaled, dtype=torch.float32)  # type: ignore
+
+        with torch.no_grad():  # type: ignore
+            raw = float(MODEL(X_tensor).item())  # type: ignore
+
+        p = _to_prob(raw)
+        band = _to_band(p)
+
+        return {
+            "ok": True,
+            "score": round(p, 6),
+            "band": band,
+            "raw": round(raw, 6),
+            "inputs": {"temp": float(temp), "sal": float(sal), "chl": float(chl)},
+            "note": "scored by internal torch model (temp,sal,chl)",
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

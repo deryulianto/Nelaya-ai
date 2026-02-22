@@ -57,7 +57,7 @@ def find_latest_local(kind: str, base_day: date, max_back: int = 10) -> tuple[Pa
         p = default_out_path(kind, d)
         if is_ok_file(p):
             return p, ymd(d)
-    # fallback: file terbaru by mtime (kalau namanya beda)
+
     folder = RAW_BASE / kind
     if folder.exists():
         cands = [p for p in folder.rglob("*.nc") if p.is_file() and p.stat().st_size >= MIN_BYTES]
@@ -73,7 +73,9 @@ def guess_lat_lon_names(ds: xr.Dataset) -> tuple[str, str]:
     lat = next((n for n in lat_candidates if n in ds.coords or n in ds.variables), None)
     lon = next((n for n in lon_candidates if n in ds.coords or n in ds.variables), None)
     if not lat or not lon:
-        raise ValueError(f"Cannot find lat/lon coords in dataset. coords={list(ds.coords)} vars={list(ds.data_vars)}")
+        raise ValueError(
+            f"Cannot find lat/lon in dataset. coords={list(ds.coords)} vars={list(ds.data_vars)}"
+        )
     return lat, lon
 
 
@@ -88,39 +90,6 @@ def pick_depth_dim(da: xr.DataArray) -> str | None:
     for n in ["depth", "deptht", "z"]:
         if n in da.dims:
             return n
-    return None
-
-
-def subset_bbox(da: xr.DataArray, lat_name: str, lon_name: str) -> xr.DataArray:
-    # pastikan slice sesuai arah koordinat
-    lat_vals = da[lat_name].values
-    lon_vals = da[lon_name].values
-
-    lat_slice = slice(BBOX["min_lat"], BBOX["max_lat"]) if lat_vals[0] < lat_vals[-1] else slice(BBOX["max_lat"], BBOX["min_lat"])
-    lon_slice = slice(BBOX["min_lon"], BBOX["max_lon"]) if lon_vals[0] < lon_vals[-1] else slice(BBOX["max_lon"], BBOX["min_lon"])
-
-    return da.sel({lat_name: lat_slice, lon_name: lon_slice})
-
-
-def scalar_mean(da: xr.DataArray) -> float | None:
-    v = da.mean(skipna=True).values
-    try:
-        val = float(np.asarray(v))
-        if np.isfinite(val):
-            return val
-    except Exception:
-        pass
-    return None
-
-
-def scalar_point(da: xr.DataArray, lat_name: str, lon_name: str, lat: float, lon: float) -> float | None:
-    try:
-        v = da.sel({lat_name: lat, lon_name: lon}, method="nearest").values
-        val = float(np.asarray(v))
-        if np.isfinite(val):
-            return val
-    except Exception:
-        return None
     return None
 
 
@@ -142,6 +111,136 @@ def load_da(ds: xr.Dataset, var: str) -> xr.DataArray:
     return da
 
 
+def subset_bbox(da: xr.DataArray, latn: str, lonn: str) -> xr.DataArray:
+    # kalau lat/lon 1D, aman pakai slice
+    try:
+        lat_da = da[latn]
+        lon_da = da[lonn]
+        if lat_da.ndim == 1 and lon_da.ndim == 1:
+            lat_vals = lat_da.values
+            lon_vals = lon_da.values
+            lat_slice = (
+                slice(BBOX["min_lat"], BBOX["max_lat"])
+                if lat_vals[0] < lat_vals[-1]
+                else slice(BBOX["max_lat"], BBOX["min_lat"])
+            )
+            lon_slice = (
+                slice(BBOX["min_lon"], BBOX["max_lon"])
+                if lon_vals[0] < lon_vals[-1]
+                else slice(BBOX["max_lon"], BBOX["min_lon"])
+            )
+            return da.sel({latn: lat_slice, lonn: lon_slice})
+    except Exception:
+        pass
+    # fallback: biarkan apa adanya
+    return da
+
+
+def scalar_mean(da: xr.DataArray) -> float | None:
+    try:
+        v = da.mean(skipna=True).values
+        val = float(np.asarray(v))
+        return val if np.isfinite(val) else None
+    except Exception:
+        return None
+
+
+def scalar_point(da: xr.DataArray, latn: str, lonn: str, lat0: float, lon0: float) -> float | None:
+    try:
+        v = da.sel({latn: lat0, lonn: lon0}, method="nearest").values
+        val = float(np.asarray(v))
+        return val if np.isfinite(val) else None
+    except Exception:
+        return None
+
+
+def _mean_finite_values(x: np.ndarray) -> float | None:
+    a = np.asarray(x).astype("float64", copy=False).ravel()
+    a = a[np.isfinite(a)]
+    if a.size == 0:
+        return None
+    return float(a.mean())
+
+
+def point_or_mean_multi(
+    da: xr.DataArray,
+    latn: str,
+    lonn: str,
+    lat0: float,
+    lon0: float,
+    box_seq: list[float],
+) -> float | None:
+    """
+    Cari nilai representatif di sekitar titik:
+    - coba nearest finite
+    - kalau NaN, coba mean finite pada window box yang makin besar
+    """
+    # buang dim non-spatial (time/depth/level) kalau masih ada
+    x = da
+    for dim in list(x.dims):
+        if dim not in (latn, lonn):
+            try:
+                x = x.isel({dim: 0})
+            except Exception:
+                pass
+
+    # 1) nearest (finite)
+    v0 = scalar_point(x, latn, lonn, lat0, lon0)
+    if v0 is not None:
+        return v0
+
+    # 2) window mean (finite only)
+    try:
+        lat_da = x[latn]
+        lon_da = x[lonn]
+
+        if lat_da.ndim == 1 and lon_da.ndim == 1:
+            lat_vals = lat_da.values
+            lon_vals = lon_da.values
+
+            for box in box_seq:
+                lat_slice = (
+                    slice(lat0 - box, lat0 + box)
+                    if lat_vals[0] < lat_vals[-1]
+                    else slice(lat0 + box, lat0 - box)
+                )
+                lon_slice = (
+                    slice(lon0 - box, lon0 + box)
+                    if lon_vals[0] < lon_vals[-1]
+                    else slice(lon0 + box, lon0 - box)
+                )
+                win = x.sel({latn: lat_slice, lonn: lon_slice})
+                mv = _mean_finite_values(win.values)
+                if mv is not None:
+                    return mv
+            return None
+
+        # kalau lat/lon 2D (nav_lat/nav_lon), cari nearest index lalu window index
+        if lat_da.ndim == 2 and lon_da.ndim == 2:
+            lat2 = np.asarray(lat_da.values)
+            lon2 = np.asarray(lon_da.values)
+            dlon = (lon2 - lon0 + 180.0) % 360.0 - 180.0
+            dist2 = (lat2 - lat0) ** 2 + dlon ** 2
+            idx = int(np.nanargmin(dist2))
+            i, j = np.unravel_index(idx, dist2.shape)
+            d0, d1 = lat_da.dims[:2]
+            ny, nx = lat2.shape
+
+            for k in [6, 10, 14, 18]:
+                i0, i1 = max(0, i - k), min(ny, i + k + 1)
+                j0, j1 = max(0, j - k), min(nx, j + k + 1)
+                win = x.isel({d0: slice(i0, i1), d1: slice(j0, j1)})
+                mv = _mean_finite_values(win.values)
+                if mv is not None:
+                    return mv
+            return None
+
+    except Exception:
+        return None
+
+    return None
+
+
 def compute_metrics(base_day: date, max_back: int = 10) -> dict:
     out: dict = {
         "ok": True,
@@ -153,7 +252,14 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
         "quick_compare": {},
     }
 
-    def add_metric(key: str, unit: str, value: float | None, src_kind: str, src_date: str | None, src_path: Path | None):
+    def add_metric(
+        key: str,
+        unit: str,
+        value: float | None,
+        src_kind: str,
+        src_date: str | None,
+        src_path: Path | None,
+    ):
         out["metrics"][key] = {
             "value": None if value is None else float(value),
             "unit": unit,
@@ -162,17 +268,20 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
             "source_path": None if src_path is None else src_path.as_posix(),
         }
 
-    # -------- SST (thetao) --------
+    # -------- SST --------
     p, pday = find_latest_local("sst_nrt", base_day, max_back=max_back)
     out["inputs"]["sst_nrt"] = {"path": None if p is None else p.as_posix(), "day": pday}
     sst_val = None
     if p:
         ds = xr.open_dataset(p)
-        lat, lon = guess_lat_lon_names(ds)
-        vname = pick_var(ds, ["thetao", "sst", "analysed_sst"])
-        if vname:
-            da = subset_bbox(load_da(ds, vname), lat, lon)
-            sst_val = scalar_mean(da)
+        try:
+            lat, lon = guess_lat_lon_names(ds)
+            vname = pick_var(ds, ["thetao", "sst", "analysed_sst"])
+            if vname:
+                da = subset_bbox(load_da(ds, vname), lat, lon)
+                sst_val = scalar_mean(da)
+        finally:
+            ds.close()
     add_metric("sst", "°C", sst_val, "sst_nrt", pday, p)
 
     # -------- CHL --------
@@ -181,123 +290,190 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
     chl_val = None
     if p:
         ds = xr.open_dataset(p)
-        lat, lon = guess_lat_lon_names(ds)
-        vname = pick_var(ds, ["CHL", "chl", "chlor_a", "chlorophyll"])
-        if vname:
-            da = subset_bbox(load_da(ds, vname), lat, lon)
-            chl_val = scalar_mean(da)
+        try:
+            lat, lon = guess_lat_lon_names(ds)
+            vname = pick_var(ds, ["CHL", "chl", "chlor_a", "chlorophyll"])
+            if vname:
+                da = subset_bbox(load_da(ds, vname), lat, lon)
+                chl_val = scalar_mean(da)
+        finally:
+            ds.close()
     add_metric("chl", "mg/m³", chl_val, "chl_nrt", pday, p)
 
-    # -------- SSH (zos) --------
+    # -------- SSH --------
     p, pday = find_latest_local("ssh_anfc", base_day, max_back=max_back)
     out["inputs"]["ssh_anfc"] = {"path": None if p is None else p.as_posix(), "day": pday}
     ssh_val_m = None
     if p:
         ds = xr.open_dataset(p)
-        lat, lon = guess_lat_lon_names(ds)
-        vname = pick_var(ds, ["zos", "ssh"])
-        if vname:
-            da = subset_bbox(load_da(ds, vname), lat, lon)
-            ssh_val_m = scalar_mean(da)
+        try:
+            lat, lon = guess_lat_lon_names(ds)
+            vname = pick_var(ds, ["zos", "ssh"])
+            if vname:
+                da = subset_bbox(load_da(ds, vname), lat, lon)
+                ssh_val_m = scalar_mean(da)
+        finally:
+            ds.close()
     ssh_val_cm = None if ssh_val_m is None else ssh_val_m * 100.0
     add_metric("ssh", "cm", ssh_val_cm, "ssh_anfc", pday, p)
 
-    # -------- SAL (so) --------
+    # -------- SAL --------
     p, pday = find_latest_local("sal_anfc", base_day, max_back=max_back)
     out["inputs"]["sal_anfc"] = {"path": None if p is None else p.as_posix(), "day": pday}
     sal_val = None
     if p:
         ds = xr.open_dataset(p)
-        lat, lon = guess_lat_lon_names(ds)
-        vname = pick_var(ds, ["so", "salinity", "S"])
-        if vname:
-            da = subset_bbox(load_da(ds, vname), lat, lon)
-            sal_val = scalar_mean(da)
+        try:
+            lat, lon = guess_lat_lon_names(ds)
+            vname = pick_var(ds, ["so", "salinity", "S"])
+            if vname:
+                da = subset_bbox(load_da(ds, vname), lat, lon)
+                sal_val = scalar_mean(da)
+        finally:
+            ds.close()
     add_metric("sal", "psu", sal_val, "sal_anfc", pday, p)
 
-    # -------- WAVE (VHM0) --------
+    # -------- WAVE (Hs) --------
     p, pday = find_latest_local("wave_anfc", base_day, max_back=max_back)
     out["inputs"]["wave_anfc"] = {"path": None if p is None else p.as_posix(), "day": pday}
     wave_val = None
     if p:
         ds = xr.open_dataset(p)
-        lat, lon = guess_lat_lon_names(ds)
-        vname = pick_var(ds, ["VHM0", "hs", "swh", "wave_height"])
-        if vname:
-            da = subset_bbox(load_da(ds, vname), lat, lon)
-            wave_val = scalar_mean(da)
+        try:
+            lat, lon = guess_lat_lon_names(ds)
+            vname = pick_var(ds, ["VHM0", "hs", "swh", "wave_height"])
+            if vname:
+                da = subset_bbox(load_da(ds, vname), lat, lon)
+                wave_val = scalar_mean(da)
+        finally:
+            ds.close()
     add_metric("wave", "m", wave_val, "wave_anfc", pday, p)
 
-    # -------- WIND (u,v → speed) --------
+    # -------- WIND (u,v -> speed) --------
     p, pday = find_latest_local("wind_nrt", base_day, max_back=max_back)
     out["inputs"]["wind_nrt"] = {"path": None if p is None else p.as_posix(), "day": pday}
     wind_val = None
-    wind_da_for_points = None
-    latlon_for_points = None
+    wind_da_for_points: xr.DataArray | None = None
+    wind_latlon: tuple[str, str] | None = None
 
     if p:
         ds = xr.open_dataset(p)
-        lat, lon = guess_lat_lon_names(ds)
+        try:
+            lat, lon = guess_lat_lon_names(ds)
+            pairs = [
+                ("eastward_wind", "northward_wind"),
+                ("u10", "v10"),
+                ("uwnd", "vwnd"),
+                ("u", "v"),
+            ]
+            u = v = None
+            for a, b in pairs:
+                if a in ds.data_vars and b in ds.data_vars:
+                    u = load_da(ds, a)
+                    v = load_da(ds, b)
+                    break
 
-        pairs = [
-            ("eastward_wind", "northward_wind"),
-            ("u10", "v10"),
-            ("uwnd", "vwnd"),
-            ("u", "v"),
-        ]
-        u = v = None
-        for a, b in pairs:
-            if a in ds.data_vars and b in ds.data_vars:
-                u = load_da(ds, a)
-                v = load_da(ds, b)
-                break
-        if u is not None and v is not None:
-            speed = np.sqrt(u**2 + v**2)
-            speed = subset_bbox(speed, lat, lon)
-            wind_val = scalar_mean(speed)
-            wind_da_for_points = speed
-            latlon_for_points = (lat, lon)
+            if u is not None and v is not None:
+                speed = np.sqrt(u**2 + v**2)
+                speed = subset_bbox(speed, lat, lon)
+                speed = speed.load()  # biar aman setelah ds.close()
+                wind_val = scalar_mean(speed)
+                wind_da_for_points = speed
+                wind_latlon = (lat, lon)
+        finally:
+            ds.close()
 
     add_metric("wind", "m/s", wind_val, "wind_nrt", pday, p)
 
     # ---------- Quick compare points ----------
-    def point_pack(lat: float, lon: float) -> dict:
-        return {"lat": lat, "lon": lon}
-
-    for key, pt in POINTS.items():
-        rec = {"point": point_pack(pt["lat"], pt["lon"]), "metrics": {}}
-
-        def sample_from(kind_key: str, var_candidates: list[str], conv=None):
-            info = out["inputs"].get(kind_key) or {}
-            path = info.get("path")
-            if not path:
-                return None
-            ds = xr.open_dataset(Path(path))
+    def sample_from_file(
+        kind_key: str,
+        var_candidates: list[str],
+        lat0: float,
+        lon0: float,
+        *,
+        conv=None,
+        box_seq: list[float],
+    ) -> float | None:
+        info = out["inputs"].get(kind_key) or {}
+        path = info.get("path")
+        if not path:
+            return None
+        ds = xr.open_dataset(Path(path))
+        try:
             latn, lonn = guess_lat_lon_names(ds)
             vname = pick_var(ds, var_candidates)
             if not vname:
                 return None
             da = load_da(ds, vname)
-            val = scalar_point(da, latn, lonn, pt["lat"], pt["lon"])
+            da = da.load()
+            val = point_or_mean_multi(da, latn, lonn, lat0, lon0, box_seq=box_seq)
             if val is None:
                 return None
             return conv(val) if conv else val
+        finally:
+            ds.close()
 
-        rec["metrics"]["sst_c"] = sample_from("sst_nrt", ["thetao", "sst", "analysed_sst"])
-        rec["metrics"]["chl"] = sample_from("chl_nrt", ["CHL", "chl", "chlor_a", "chlorophyll"])
-        rec["metrics"]["hs_m"] = sample_from("wave_anfc", ["VHM0", "hs", "swh", "wave_height"])
-        rec["metrics"]["ssh_cm"] = sample_from("ssh_anfc", ["zos", "ssh"], conv=lambda x: x * 100.0)
+    for key, pt in POINTS.items():
+        lat0 = float(pt["lat"])
+        lon0 = float(pt["lon"])
 
-        # wind speed kalau punya speed da yang sudah dihitung
-        if wind_da_for_points is not None and latlon_for_points is not None:
-            latn, lonn = latlon_for_points
-            rec["metrics"]["wind_ms"] = scalar_point(wind_da_for_points, latn, lonn, pt["lat"], pt["lon"])
+        rec = {"point": {"lat": lat0, "lon": lon0}, "metrics": {}}
+
+        # SST: box kecil cukup
+        rec["metrics"]["sst_c"] = sample_from_file(
+            "sst_nrt",
+            ["thetao", "sst", "analysed_sst"],
+            lat0,
+            lon0,
+            box_seq=[0.12, 0.20, 0.35],
+        )
+
+        # CHL: dekat pantai sering mask → box lebih agresif
+        rec["metrics"]["chl"] = sample_from_file(
+            "chl_nrt",
+            ["CHL", "chl", "chlor_a", "chlorophyll"],
+            lat0,
+            lon0,
+            box_seq=[0.20, 0.35, 0.50, 0.80, 1.20, 1.80],
+        )
+
+        # Hs: biasanya stabil
+        rec["metrics"]["hs_m"] = sample_from_file(
+            "wave_anfc",
+            ["VHM0", "hs", "swh", "wave_height"],
+            lat0,
+            lon0,
+            box_seq=[0.12, 0.20, 0.35, 0.50],
+        )
+
+        # SSH: cm
+        rec["metrics"]["ssh_cm"] = sample_from_file(
+            "ssh_anfc",
+            ["zos", "ssh"],
+            lat0,
+            lon0,
+            conv=lambda x: x * 100.0,
+            box_seq=[0.12, 0.20, 0.35, 0.50],
+        )
+
+        # WIND: pakai speed DA yang sudah dihitung, cari finite pakai box bertahap
+        if wind_da_for_points is not None and wind_latlon is not None:
+            latn, lonn = wind_latlon
+            rec["metrics"]["wind_ms"] = point_or_mean_multi(
+                wind_da_for_points,
+                latn,
+                lonn,
+                lat0,
+                lon0,
+                box_seq=[0.20, 0.35, 0.50, 0.80, 1.20, 1.80, 2.50],
+            )
         else:
             rec["metrics"]["wind_ms"] = None
 
         out["quick_compare"][key] = rec
 
-    # alias flat keys (biar kompatibel sama UI yang nunggu nama tertentu)
+    # alias flat keys (biar kompatibel sama UI)
     m = out["metrics"]
     out["sst_c"] = (m.get("sst") or {}).get("value")
     out["chl_mg_m3"] = (m.get("chl") or {}).get("value")
@@ -306,7 +482,6 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
     out["ssh_cm"] = (m.get("ssh") or {}).get("value")
     out["sal_psu"] = (m.get("sal") or {}).get("value")
 
-    # ok false kalau semua kosong
     if all(out.get(k) is None for k in ["sst_c", "chl_mg_m3", "wind_ms", "wave_m", "ssh_cm"]):
         out["ok"] = False
 

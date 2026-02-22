@@ -2,35 +2,68 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
 
 : "${NELAYA_KIND:?missing NELAYA_KIND}"
-: "${NELAYA_DAY:?missing NELAYA_DAY}"
+: "${NELAYA_DAY:?missing NELAYA_DAY}"   # YYYY-MM-DD (UTC day)
 : "${NELAYA_OUT:?missing NELAYA_OUT}"
 
-# Area Aceh box
+# =========================
+# Region box: Aceh–Simeulue
+# =========================
 MIN_LON=92
 MAX_LON=99
 MIN_LAT=1
 MAX_LAT=7
 
-# Pakai copernicusmarine dari venv kalau ada
-COP="/.local/share/mamba/envs/cm/bin/copernicusmarine"
-if [[ ! -x "" ]]; then
-  COP="/.venv/bin/copernicusmarine"
-fi
-if [[ ! -x "" ]]; then
-  COP="1000 4 20 24 25 27 29 30 44 46 100 107 985 986 993 1000command -v copernicusmarine)"
+# =========================
+# Pick copernicusmarine bin
+# Priority: venv -> mamba -> PATH
+# =========================
+COP="${COPERNICUSMARINE_BIN:-$ROOT/.venv/bin/copernicusmarine}"
+
+if [[ -x "$HOME/.local/share/mamba/envs/cm/bin/copernicusmarine" ]]; then
+  COP="$HOME/.local/share/mamba/envs/cm/bin/copernicusmarine"
 fi
 
-# Waktu: untuk produk P1D biasanya timestamp 00:00:00
+if [[ ! -x "$COP" ]]; then
+  if command -v copernicusmarine >/dev/null 2>&1; then
+    COP="$(command -v copernicusmarine)"
+  fi
+fi
+
+if [[ ! -x "$COP" ]]; then
+  echo "[ERROR] copernicusmarine not found. Checked:" >&2
+  echo "  - $ROOT/.venv/bin/copernicusmarine" >&2
+  echo "  - $HOME/.local/share/mamba/envs/cm/bin/copernicusmarine" >&2
+  echo "  - PATH: \$(command -v copernicusmarine)" >&2
+  exit 1
+fi
+
+echo "[INFO] Using copernicusmarine: $COP"
+"$COP" --version || true
+
+# =========================
+# Time windows
+# IMPORTANT: jangan start=end (bisa jadi empty result)
+# Use full-day window in UTC by using [DAY 00:00 .. NEXTDAY 00:00)
+# =========================
+NEXT_DAY="$(date -u -d "${NELAYA_DAY} +1 day" +%F)"
+
+# CHL NRT sering delay; mundurkan 2 hari agar tidak out-of-bounds
+if [[ "$NELAYA_KIND" == "chl_nrt" ]]; then
+  NELAYA_DAY="$(date -u -d "${NELAYA_DAY} -2 day" +%F)"
+  NEXT_DAY="$(date -u -d "${NELAYA_DAY} +1 day" +%F)"
+fi
+
+
 P1D_START="${NELAYA_DAY}T00:00:00"
-P1D_END="${NELAYA_DAY}T00:00:00"
+P1D_END="${NEXT_DAY}T00:00:00"
 
-# Untuk produk sub-harian (contoh wave PT3H) ambil 1 hari penuh
 H_START="${NELAYA_DAY}T00:00:00"
-H_END="${NELAYA_DAY}T23:59:59"
+H_END="${NEXT_DAY}T00:00:00"
 
-# Surface depth workaround (biar file kecil & konsisten dgn time-series kamu)
+# Surface depth (workaround biar konsisten & kecil)
 DEPTH_SURF="0.49402499198913574"
 
 dataset=""
@@ -41,20 +74,16 @@ vars_try_sets=()
 
 case "$NELAYA_KIND" in
   sst_nrt)
-    # Layer thetao (analysis/forecast), sesuai pola CMEMS
     dataset="cmems_mod_glo_phy-thetao_anfc_0.083deg_P1D-m"
     depth_args=(--minimum-depth "$DEPTH_SURF" --maximum-depth "$DEPTH_SURF")
     vars_try_sets=("thetao")
     ;;
   chl_nrt)
-    # Ocean color chlorophyll; variabel sering "CHL"
     dataset="cmems_obs-oc_glo_bgc-plankton_nrt_l3-multi-4km_P1D"
     vars_try_sets=("CHL" "chl")
     ;;
   wind_nrt)
-    # Wind L3 NRT (pilih salah satu dataset daily 0.25deg). Kalau mau ganti dataset lain: lihat list di halaman produk.
     dataset="cmems_obs-wind_glo_phy_nrt_l3-metopc-ascat-des-0.25deg_P1D-i"
-    # Coba beberapa kemungkinan nama variabel (biar nggak nebak doang)
     vars_try_sets=("eastward_wind,northward_wind" "u10,v10" "uwnd,vwnd" "u,v" "wind_speed,wind_dir")
     ;;
   wave_anfc)
@@ -63,7 +92,6 @@ case "$NELAYA_KIND" in
     vars_try_sets=("VHM0,VTPK,VMDR" "VHM0,VMDR" "VHM0")
     ;;
   ssh_anfc)
-    # Sea surface height: coba dulu di layer multi-var anfc
     dataset="cmems_mod_glo_phy_anfc_0.083deg_P1D-m"
     vars_try_sets=("zos" "adt" "sla")
     ;;
@@ -82,6 +110,9 @@ out_dir="$(dirname "$NELAYA_OUT")"
 out_file="$(basename "$NELAYA_OUT")"
 mkdir -p "$out_dir"
 
+# =========================
+# Run subset for a variable set
+# =========================
 run_subset () {
   local varcsv="$1"
   IFS=',' read -r -a VARS <<< "$varcsv"
@@ -108,21 +139,30 @@ run_subset () {
   "${args[@]}"
 }
 
-# coba beberapa set variabel sampai ada yang tembus
-if [[ "${#vars_try_sets[@]}" -eq 1 && "${vars_try_sets[0]}" != *","* ]]; then
-  # single variable (tanpa CSV)
-  run_subset "${vars_try_sets[0]}"
-else
-  for varset in "${vars_try_sets[@]}"; do
-    set +e
-    run_subset "$varset"
-    rc=$?
-    set -e
-    if [[ $rc -eq 0 ]]; then
-      exit 0
+# =========================
+# Try variable sets until one succeeds
+# =========================
+for varset in "${vars_try_sets[@]}"; do
+  set +e
+  run_subset "$varset"
+  rc=$?
+  set -e
+  if [[ $rc -eq 0 ]]; then
+    # sanity check output exists & not tiny
+    if [[ -f "$NELAYA_OUT" ]]; then
+      sz="$(stat -c%s "$NELAYA_OUT" 2>/dev/null || echo 0)"
+      echo "[INFO] output size: ${sz} bytes -> $NELAYA_OUT"
+      if [[ "$sz" -ge 10000 ]]; then
+        exit 0
+      fi
+      echo "[WARN] output too small (<10KB), treating as failure; deleting: $NELAYA_OUT"
+      rm -f "$NELAYA_OUT" || true
+    else
+      echo "[WARN] subset returned 0 but output file missing: $NELAYA_OUT"
     fi
-    echo "[WARN] subset failed rc=$rc with vars=$varset (trying next...)"
-  done
-  echo "[ERR] all variable sets failed for kind=$NELAYA_KIND dataset=$dataset" >&2
-  exit 10
-fi
+  fi
+  echo "[WARN] subset failed rc=$rc with vars=$varset (trying next...)"
+done
+
+echo "[ERR] all variable sets failed for kind=$NELAYA_KIND dataset=$dataset" >&2
+exit 10
