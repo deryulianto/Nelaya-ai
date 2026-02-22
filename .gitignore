@@ -33,3 +33,4 @@ __pycache__/
 # python cache
 __pycache__/
 *.pyc
+*.bak.*
