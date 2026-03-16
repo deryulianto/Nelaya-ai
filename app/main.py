@@ -21,9 +21,11 @@ STRICT_IMPORT = os.getenv("NELAYA_STRICT_IMPORT", "0") == "1"
 # -----------------------------------------------------------------------------
 app = FastAPI(title="NELAYA-AI API", version="0.9.1")
 
+
 @app.get("/health")
 def health():
     return {"ok": True, "service": "nelaya-ai", "version": "0.9.1"}
+
 
 # -----------------------------------------------------------------------------
 # Router mounting helper
@@ -38,6 +40,7 @@ def opt_router(module_path: str, attr: str = "router"):
             raise
         return None
 
+
 def mount(module_path: str, *, prefix: str = "", attr: str = "router"):
     r = opt_router(module_path, attr)
     if r is not None:
@@ -45,6 +48,7 @@ def mount(module_path: str, *, prefix: str = "", attr: str = "router"):
         log.info("✅ Mounted: %s (prefix='%s')", module_path, prefix)
     else:
         log.warning("⚠️ Skipped: %s", module_path)
+
 
 # -----------------------------------------------------------------------------
 # ROUTERS (urut jelas)
@@ -70,8 +74,22 @@ mount("app.routers.ocean_memory", prefix="")
 mount("app.routers.fgi_time_series", prefix="")
 mount("app.routers.fgi_time_series_profile", prefix="")
 
+mount("app.routers.fgi_rumpon", prefix="")
+mount("app.routers.rumpon", prefix="")
+
 mount("app.routers.time_series", prefix="")
 mount("app.routers.time_series_profile", prefix="")
+
+# -----------------------------------------------------------------------------
+# OCEAN INTELLIGENCE ROUTERS
+# -----------------------------------------------------------------------------
+mount("app.routers.osi_v1", prefix="")
+mount("app.routers.osi_today", prefix="")
+mount("app.routers.osi_map", prefix="")
+mount("app.routers.insight_today", prefix="")
+mount("app.routers.brief_today", prefix="")
+
+mount("app.routers.ocean_ask", prefix="")
 
 # Optional init_db
 try:

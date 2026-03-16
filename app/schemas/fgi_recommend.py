@@ -30,10 +30,7 @@ Mode = Literal["optimal", "budget"]
 
 
 class OptimizeOriginRequest(BaseModel):
-    # FE kamu kirim "date"
     date: Optional[str] = None
-
-    # kompatibilitas kalau nanti ada client lama kirim "date_utc"
     date_utc: Optional[str] = None
 
     mode: Mode = "optimal"
@@ -57,10 +54,22 @@ class SpotOut(BaseModel):
     fuel_l_roundtrip: Optional[float] = None
     fuel_cost_rp: Optional[float] = None
 
-    # extra metrics (kalau ada di geojson)
     sst_c: Optional[float] = None
     sal_psu: Optional[float] = None
     chl_mg_m3: Optional[float] = None
+
+    # --- FGI-R fields ---
+    fgi_env: Optional[float] = None
+    fgi_r: Optional[float] = None
+    band_r: Optional[str] = None
+
+    nearest_rumpon_id: Optional[str] = None
+    nearest_rumpon_km: Optional[float] = None
+    rumpon_count_radius: Optional[int] = None
+    rumpon_influence: Optional[float] = None
+    distance_score: Optional[float] = None
+    density_score: Optional[float] = None
+    legal_score: Optional[float] = None
 
 
 class OptimizeOriginResponse(BaseModel):
