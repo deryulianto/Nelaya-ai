@@ -97,8 +97,16 @@ def compute_completeness(today: Dict[str, Any]) -> str:
 
 def get_ocean_today(
     region: Optional[str] = None,
+    lat: Optional[float] = None,
+    lon: Optional[float] = None,
     context: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+
+    # 🔥 PRIORITAS 1: coordinate-based query (Fusion)
+    if lat is not None and lon is not None:
+        return _get_ocean_by_coordinate(lat, lon, context=context)
+
+    # 🔥 fallback: region-based (existing behavior)
     region = region or "Aceh"
 
     signals = _load_json(EARTH_SIGNALS_TODAY) or {}
@@ -123,6 +131,33 @@ def get_ocean_today(
     out["completeness"] = compute_completeness(out)
 
     return out
+
+def _get_ocean_by_coordinate(
+    lat: float,
+    lon: float,
+    context: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    🔥 Fusion bridge:
+    - sekarang: koordinat → region
+    - next upgrade: langsung ke grid Copernicus
+    """
+
+    try:
+        from app.services.spatial_resolver import infer_region_from_coordinate
+        region = infer_region_from_coordinate(lat, lon)
+    except Exception:
+        region = "Aceh"
+
+    # 🔥 ambil data berbasis region (sementara)
+    data = get_ocean_today(region=region, context=context)
+
+    # 🔥 inject info koordinat (penting untuk frontend & reasoning)
+    data["lat"] = lat
+    data["lon"] = lon
+    data["query_type"] = "coordinate"
+
+    return data
 
 
 def get_fgi_today(region: Optional[str] = None) -> Dict[str, Any]:

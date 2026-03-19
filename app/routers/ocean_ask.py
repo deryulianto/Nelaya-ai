@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Optional, Any, Dict, List
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Body
 
 from app.ai.answer_builder import build_answer
 from app.ai.router import route_question
@@ -18,7 +18,12 @@ from app.services.reference_data_service import (
     list_dataset,
     list_small_islands,
     find_nearest_ports,
+    find_nearest_surf_spots,
+    resolve_region_center,
 )
+from app.services.region_resolver_service import resolve_region_spatial
+from app.services.ocean_narrative_service import build_ocean_narrative
+
 
 router = APIRouter(prefix="/api/v1/ocean", tags=["Ocean Brain"])
 
@@ -44,6 +49,10 @@ def _pick_trend_metric(intent: str, detected_metric: Optional[str]) -> str:
 def _looks_like_graph_query(question: str) -> bool:
     q = (question or "").lower()
 
+    # kalau user sedang menanya kondisi laut, jangan paksa masuk graph
+    if _looks_like_ocean_condition_query(q):
+        return False
+
     graph_keywords = [
         "panglima laot",
         "panglima laot lhok",
@@ -51,14 +60,14 @@ def _looks_like_graph_query(question: str) -> bool:
         "masyarakat hukum adat laut",
         "apa hubungan",
         "terkait dengan apa",
-        "selat malaka",
         "wppnri",
-        "laut andaman",
-        "samudera hindia",
-        "zona perikanan tangkap",
-        "kawasan konservasi",
         "ada berapa wppnri",
         "jumlah wppnri",
+        "selat malaka terkait",
+        "laut andaman terkait",
+        "samudera hindia terkait",
+        "zona perikanan tangkap",
+        "kawasan konservasi",
     ]
 
     return any(k in q for k in graph_keywords)
@@ -123,18 +132,14 @@ def _handle_reference_v2(question: str, region: str | None):
     label = label_map[dataset]
     region_label = region or "Aceh"
 
+    center = resolve_region_center(region_label)
+
     # nearest port
     if dataset == "ports" and "terdekat" in q:
-        coord_map = {
-            "simeulue": (2.6167, 96.0833),
-            "banda aceh": (5.55, 95.32),
-            "selat malaka": (4.5, 98.0),
-            "aceh": (4.5, 96.5),
-        }
+        if not center:
+            return None
 
-        key = (region or "aceh").strip().lower()
-        lat, lon = coord_map.get(key, (4.5, 96.5))
-
+        lat, lon = center
         res = find_nearest_ports(lat, lon)
 
         return {
@@ -149,9 +154,38 @@ def _handle_reference_v2(question: str, region: str | None):
             },
             "evidence": {
                 "items": res,
+                "resolved_center": {"lat": lat, "lon": lon},
             },
             "data_status": {
                 "dataset": "ports",
+                "count": len(res),
+            },
+        }
+
+    # nearest surf spot
+    if dataset == "surf_spots" and "terdekat" in q:
+        if not center:
+            return None
+
+        lat, lon = center
+        res = find_nearest_surf_spots(lat, lon)
+
+        return {
+            "ok": True,
+            "intent": "reference_data_query",
+            "query_type": "nearest_surf_spots",
+            "answer": {
+                "headline": "Lokasi surfing terdekat berhasil ditemukan.",
+                "summary": f"Surf spot terdekat antara lain: {', '.join([r['name'] for r in res])}.",
+                "recommendation": "Gunakan lokasi terdekat sebagai pembacaan awal sebelum melihat detail ombak dan akses lapangan.",
+                "caution": "Kualitas surfing tetap perlu dibaca bersama kondisi ombak, angin, dan akses lokasi.",
+            },
+            "evidence": {
+                "items": res,
+                "resolved_center": {"lat": lat, "lon": lon},
+            },
+            "data_status": {
+                "dataset": "surf_spots",
                 "count": len(res),
             },
         }
@@ -210,6 +244,18 @@ def _handle_reference_v2(question: str, region: str | None):
                 "count": res.get("count", len(items)),
             },
         }
+
+def _detect_reference_dataset(question: str) -> str | None:
+    q = (question or "").lower()
+
+    if "pulau" in q:
+        return "small_islands"
+    if "pelabuhan" in q or "port" in q:
+        return "ports"
+    if "surf" in q or "surfing" in q or "ombak bagus" in q or "spot surfing" in q or "surf spot" in q:
+        return "surf_spots"
+
+    return None
 
     return None
 
@@ -313,6 +359,333 @@ def _reg_summary_from_payload(reg_payload: dict) -> str:
         return headline
     return "Jawaban regulasi ditemukan."
 
+def _fusion_confidence(needs: dict, evidence: dict) -> float:
+    score = 0.55
+
+    if needs.get("needs_ocean") and evidence.get("ocean"):
+        score += 0.15
+    if needs.get("needs_reference") and evidence.get("reference"):
+        score += 0.10
+    if needs.get("needs_graph") and evidence.get("graph"):
+        score += 0.10
+    if needs.get("needs_regulation") and evidence.get("regulation"):
+        score += 0.10
+
+    return round(min(score, 0.95), 2)
+
+
+def _build_fusion_headline(needs: dict, evidence: dict) -> str:
+    ocean = evidence.get("ocean", {}) or {}
+    ref = evidence.get("reference", {}) or {}
+    graph = evidence.get("graph", {}) or {}
+
+    wave = ocean.get("wave_m")
+    wind = ocean.get("wind_ms")
+
+    if needs.get("needs_ocean"):
+        if wave is not None and wind is not None:
+            if wave <= 1.25 and wind <= 5:
+                return "Kondisi laut relatif mendukung dan informasi pendukung berhasil dihimpun."
+            if wave <= 2.0 and wind <= 8:
+                return "Kondisi laut cukup mendukung, dengan beberapa catatan operasional."
+            return "Kondisi laut perlu diwaspadai, tetapi informasi pendukung sudah tersedia."
+        return "Informasi gabungan berhasil disusun dari beberapa sumber NELAYA-AI."
+
+    if needs.get("needs_graph") and graph:
+        return "Relasi wilayah dan informasi pendukung berhasil disusun."
+
+    if needs.get("needs_reference") and ref:
+        return "Data referensi berhasil ditemukan."
+
+    return "Jawaban gabungan berhasil disusun."
+
+
+def _build_fusion_summary(req: OceanAskRequest, needs: dict, evidence: dict) -> str:
+    q = (req.question or "").lower()
+    region = req.region or "wilayah ini"
+  
+    ocean = evidence.get("ocean", {}) or {}
+    ref = evidence.get("reference", {}) or {}
+    graph = evidence.get("graph", {}) or {}
+    regulation = evidence.get("regulation", {}) or {}
+    spatial = evidence.get("spatial", {})
+
+    if spatial:
+        name = spatial.get("name")
+        center = spatial.get("center")
+        bbox = spatial.get("bbox")
+
+        if center:
+            lat, lon = center
+            paragraphs.append(
+                f"Wilayah {name} secara spasial berada di sekitar koordinat "
+                f"{lat:.2f}, {lon:.2f}, memberikan referensi posisi yang lebih presisi."
+            )
+
+        if bbox:
+            paragraphs.append(
+                f"Wilayah ini mencakup rentang area yang cukup luas, "
+                f"sehingga kondisi laut dapat bervariasi antar titik di dalamnya."
+            )
+
+    paragraphs: List[str] = []
+
+    # ocean
+    if needs.get("needs_ocean") and ocean:
+        wave = ocean.get("wave_m")
+        wind = ocean.get("wind_ms")
+        sst = ocean.get("sst_c")
+
+        if "aman melaut" in q:
+            if wave is not None and wind is not None:
+                paragraphs.append(
+                    f"Untuk {region}, tinggi gelombang saat ini sekitar {wave:.2f} m dan angin sekitar {wind:.2f} m/s. "
+                    "Ini memberi pembacaan awal bahwa keputusan melaut tetap perlu mempertimbangkan perubahan lapangan."
+                )
+            elif wave is not None:
+                paragraphs.append(
+                    f"Untuk {region}, tinggi gelombang saat ini sekitar {wave:.2f} m."
+                )
+        elif "ombak" in q or "gelombang" in q:
+            if wave is not None:
+                paragraphs.append(f"Gelombang di {region} saat ini terbaca sekitar {wave:.2f} m.")
+        elif "angin" in q and wind is not None:
+            paragraphs.append(f"Angin di {region} saat ini sekitar {wind:.2f} m/s.")
+        elif sst is not None:
+            paragraphs.append(f"Suhu permukaan laut di {region} saat ini sekitar {sst:.2f} °C.")
+
+    # reference
+    if needs.get("needs_reference") and ref:
+        items = ref.get("items", []) or []
+
+        if "pelabuhan terdekat" in q and items:
+            first = items[0]
+            if isinstance(first, dict):
+                nm = first.get("name", "pelabuhan terdekat")
+                dist = first.get("distance_km")
+                if dist is not None:
+                    paragraphs.append(
+                        f"Pelabuhan terdekat yang terbaca dari basis data referensi adalah {nm} "
+                        f"dengan perkiraan jarak sekitar {dist:.2f} km."
+                    )
+                else:
+                    paragraphs.append(f"Pelabuhan terdekat yang terbaca adalah {nm}.")
+        elif ("surf terdekat" in q or "surf spot terdekat" in q or "lokasi surfing terdekat" in q) and items:
+            first = items[0]
+            if isinstance(first, dict):
+                nm = first.get("name", "surf spot terdekat")
+                dist = first.get("distance_km")
+                if dist is not None:
+                    paragraphs.append(
+                        f"Surf spot terdekat yang terbaca dari basis data referensi adalah {nm} "
+                        f"dengan perkiraan jarak sekitar {dist:.2f} km."
+                    )
+                else:
+                    paragraphs.append(f"Surf spot terdekat yang terbaca adalah {nm}.")
+        elif ("apa saja" in q or "daftar" in q or "sebutkan" in q) and items:
+            sample = ", ".join(str(x) for x in items[:8])
+            paragraphs.append(
+                f"Beberapa data referensi yang relevan untuk {region} antara lain: {sample}."
+            )
+
+    # graph
+    if needs.get("needs_graph") and graph:
+        node = graph.get("node", {}) or {}
+        rels = graph.get("relations", []) or []
+        node_name = node.get("name")
+        if node_name and rels:
+            paragraphs.append(
+                f"Dari sisi relasi wilayah, {node_name} dalam knowledge graph NELAYA-AI terhubung dengan: {rels[0]}."
+            )
+
+    # regulation
+    if needs.get("needs_regulation") and regulation:
+        srcs = regulation.get("sources", []) or []
+        if srcs:
+            first = srcs[0]
+            title = first.get("title", "dokumen regulasi")
+            pasal = first.get("pasal", "")
+            suffix = f" {pasal}" if pasal else ""
+            paragraphs.append(
+                f"Dari sisi regulasi, rujukan utama yang paling dekat untuk pertanyaan ini adalah {title}{suffix}."
+            )
+
+    if not paragraphs:
+        return "Beberapa sumber pengetahuan NELAYA-AI berhasil dibaca, tetapi ringkasan gabungan belum terbentuk optimal."
+
+    return "\n\n".join(paragraphs)
+
+
+def _build_fusion_recommendation(req: OceanAskRequest, needs: dict, evidence: dict) -> str:
+    q = (req.question or "").lower()
+    ocean = evidence.get("ocean", {}) or {}
+    ref = evidence.get("reference", {}) or {}
+
+    if "pelabuhan terdekat" in q and ref.get("items"):
+        first = ref["items"][0]
+        if isinstance(first, dict):
+            nm = first.get("name")
+            if nm:
+                return f"Gunakan informasi kondisi laut bersama akses ke {nm} sebagai pertimbangan operasional awal."
+
+    if "aman melaut" in q and ocean:
+        return "Padukan pembacaan ini dengan pengamatan lapangan, prakiraan cuaca, dan rencana titik berangkat yang paling aman."
+
+    return "Gunakan jawaban ini sebagai pembacaan gabungan awal sebelum mengambil keputusan lapangan."
+
+
+def _build_fusion_caution(needs: dict) -> str:
+    if needs.get("needs_ocean") and needs.get("needs_reference"):
+        return "Data sistem membantu mempercepat pembacaan awal, tetapi keputusan akhir tetap harus mengikuti kondisi nyata di lapangan."
+    if needs.get("needs_regulation"):
+        return "Untuk aspek hukum, tetap pastikan konteks pasal dan wilayah penerapan dibaca dari dokumen resmi."
+    return "Interpretasi terbaik tetap diperoleh dengan memadukan data sistem dan verifikasi lapangan."
+
+def _build_multi_intent_narrative(
+    req: OceanAskRequest,
+    evidence: Dict[str, Any],
+    needs: dict,
+) -> Dict[str, str]:
+    q = (req.question or "").lower()
+    region = req.region or "wilayah ini"
+    persona = (req.persona or "publik").strip().lower()
+
+    ocean = evidence.get("ocean", {}) or {}
+    reference = evidence.get("reference", {}) or {}
+    graph = evidence.get("graph", {}) or {}
+    regulation = evidence.get("regulation", {}) or {}
+
+    parts: List[str] = []
+
+    # 1. Ocean part
+    wave = ocean.get("wave_m")
+    wind = ocean.get("wind_ms")
+    sst = ocean.get("sst_c")
+    chl = ocean.get("chl_mg_m3")
+    fgi = ocean.get("fgi_score")
+    trend = ocean.get("trend")
+
+    if wave is not None and wind is not None:
+        parts.append(
+            f"Kondisi laut di {region} saat ini menunjukkan gelombang sekitar {wave:.2f} m "
+            f"dengan angin sekitar {wind:.2f} m/s."
+        )
+
+    if sst is not None and chl is not None:
+        parts.append(
+            f"Suhu permukaan laut berada di sekitar {sst:.2f} °C "
+            f"dengan klorofil sekitar {chl:.2f} mg/m³."
+        )
+
+    if fgi is not None:
+        if fgi < 0.3:
+            parts.append("Indikator peluang ikan masih berada pada level rendah.")
+        elif fgi < 0.6:
+            parts.append("Indikator peluang ikan berada pada level cukup.")
+        else:
+            parts.append("Indikator peluang ikan berada pada level tinggi.")
+
+    if trend:
+        parts.append(f"Tren kondisi laut saat ini cenderung {trend}.")
+
+    # 2. Reference part
+    ref_items = reference.get("items", []) or []
+
+    if "pelabuhan terdekat" in q and ref_items:
+        first = ref_items[0]
+        if isinstance(first, dict):
+            nm = first.get("name", "pelabuhan terdekat")
+            dist = first.get("distance_km")
+            if dist is not None:
+                parts.append(
+                    f"Pelabuhan terdekat yang terbaca dari basis data referensi adalah {nm} "
+                    f"dengan perkiraan jarak sekitar {dist:.2f} km."
+                )
+            else:
+                parts.append(f"Pelabuhan terdekat yang terbaca adalah {nm}.")
+    elif ("surf spot terdekat" in q or "surf terdekat" in q or "lokasi surfing terdekat" in q) and ref_items:
+        first = ref_items[0]
+        if isinstance(first, dict):
+            nm = first.get("name", "surf spot terdekat")
+            dist = first.get("distance_km")
+            if dist is not None:
+                parts.append(
+                    f"Surf spot terdekat yang terbaca adalah {nm} "
+                    f"dengan perkiraan jarak sekitar {dist:.2f} km."
+                )
+            else:
+                parts.append(f"Surf spot terdekat yang terbaca adalah {nm}.")
+    elif ref_items and any(k in q for k in ["apa saja", "daftar", "sebutkan"]):
+        sample = ", ".join(str(x) for x in ref_items[:8])
+        parts.append(f"Beberapa data referensi yang relevan antara lain: {sample}.")
+
+    # 3. Graph part
+    node = graph.get("node", {}) or {}
+    rels = graph.get("relations", []) or []
+    node_name = node.get("name")
+    if node_name and rels:
+        parts.append(
+            f"Dari sisi relasi wilayah, {node_name} dalam knowledge graph NELAYA-AI "
+            f"terhubung dengan: {rels[0]}."
+        )
+
+    # 4. Regulation part
+    reg_sources = regulation.get("sources", []) or []
+    if reg_sources:
+        first = reg_sources[0]
+        title = first.get("title", "dokumen regulasi")
+        pasal = first.get("pasal")
+        if pasal:
+            parts.append(
+                f"Untuk aspek regulasi, rujukan awal yang paling dekat adalah {title} {pasal}."
+            )
+        else:
+            parts.append(
+                f"Untuk aspek regulasi, rujukan awal yang paling dekat adalah {title}."
+            )
+
+    summary = " ".join(parts) if parts else "Jawaban gabungan berhasil dibentuk dari beberapa komponen pengetahuan NELAYA-AI."
+
+    # Persona-aware headline / recommendation
+    if persona == "nelayan":
+        headline = "Pembacaan gabungan untuk operasi melaut."
+        recommendation = (
+            "Gunakan pembacaan ini sebagai dasar awal, lalu cek kondisi angin, gelombang, dan titik berangkat di lapangan sebelum berangkat."
+        )
+        caution = (
+            "Keputusan melaut tetap harus mempertimbangkan perubahan cepat di laut, terutama pada wilayah terbuka."
+        )
+    elif persona in {"wisata", "surf", "surfer"}:
+        headline = "Pembacaan gabungan untuk aktivitas wisata laut."
+        recommendation = (
+            "Padukan kondisi ombak, angin, dan akses lokasi sebelum menentukan waktu aktivitas di laut."
+        )
+        caution = (
+            "Kondisi laut dapat berubah cepat, sehingga verifikasi lapangan tetap diperlukan."
+        )
+    elif persona in {"pemerintah", "policy", "pembuat_kebijakan"}:
+        headline = "Pembacaan gabungan untuk pemantauan wilayah."
+        recommendation = (
+            "Gunakan ringkasan ini sebagai pembacaan awal untuk melihat dinamika ruang laut dan kebutuhan tindak lanjut."
+        )
+        caution = (
+            "Interpretasi wilayah luas sebaiknya tidak bertumpu pada satu titik pembacaan saja."
+        )
+    else:
+        headline = "Jawaban gabungan berhasil disusun."
+        recommendation = (
+            "Gunakan jawaban ini sebagai pembacaan awal sebelum mengambil keputusan lebih lanjut."
+        )
+        caution = (
+            "Padukan data sistem dengan pengamatan lapangan dan sumber resmi yang relevan."
+        )
+
+    return {
+        "headline": headline,
+        "summary": summary,
+        "recommendation": recommendation,
+        "caution": caution,
+    }
 
 def _handle_fusion_query(req: OceanAskRequest):
     needs = _detect_brain_needs(req.question)
@@ -321,12 +694,17 @@ def _handle_fusion_query(req: OceanAskRequest):
     if len(active) < 2:
         return None
 
-    parts: List[str] = []
     evidence: Dict[str, Any] = {}
     explanations: List[str] = []
     sources: List[Dict[str, Any]] = []
 
     region = req.region or "Aceh"
+
+    # spatial resolve
+    spatial = resolve_region_spatial(req.region)
+
+    if spatial:
+       evidence["spatial"] = spatial
 
     # 1. Ocean brain
     if needs["needs_ocean"]:
@@ -369,10 +747,22 @@ def _handle_fusion_query(req: OceanAskRequest):
             reasoning=reasoning,
         )
 
-        ocean_summary = built.get("answer", {}).get("summary") or built.get("answer", {}).get("headline")
-        if ocean_summary:
-            parts.append(f"Aspek kondisi laut: {ocean_summary}")
+        # 🔥 Fusion v9: Narrative Engine
+        from app.services.ocean_narrative_service import build_ocean_narrative
 
+        spatial = evidence.get("spatial")  # sudah ada dari fusion sebelumnya
+
+        narrative = build_ocean_narrative(
+            region=region,
+            today={**today, "fgi_score": fgi.get("fgi_score") if isinstance(fgi, dict) else None,
+                   "trend": trend.get("trend") if isinstance(trend, dict) else None},
+            spatial=spatial,
+        )
+
+        # override hanya bagian "answer"
+        built["answer"] = narrative
+
+        # tetap simpan evidence & explanation dari engine lama
         evidence["ocean"] = built.get("evidence", {})
         explanations.extend((built.get("explanation") or [])[:2])
 
@@ -380,21 +770,13 @@ def _handle_fusion_query(req: OceanAskRequest):
     if needs["needs_reference"]:
         ref = _handle_reference_v2(req.question, req.region)
         if ref:
-            parts.append(f"Aspek data referensi: {_reference_summary_from_payload(ref)}")
             evidence["reference"] = ref.get("evidence", {})
             explanations.extend((ref.get("explanation") or [])[:1])
 
-    # 3. Knowledge graph brain
+    # 3. Graph brain
     if needs["needs_graph"]:
         graph_answer = graph_engine.answer(req.question)
         if graph_answer:
-            graph_payload = {
-                "answer": {
-                    "headline": graph_answer.get("headline"),
-                    "summary": graph_answer.get("summary"),
-                }
-            }
-            parts.append(f"Aspek relasi wilayah: {_graph_summary_from_payload(graph_payload)}")
             evidence["graph"] = {
                 "node": graph_answer.get("node"),
                 "relations": graph_answer.get("relations", [])[:3],
@@ -407,13 +789,6 @@ def _handle_fusion_query(req: OceanAskRequest):
     # 4. Regulation brain
     if needs["needs_regulation"]:
         reg_answer = engine.answer(req.question)
-        reg_payload = {
-            "answer": {
-                "headline": "Jawaban regulasi ditemukan.",
-                "summary": reg_answer.get("answer"),
-            }
-        }
-        parts.append(f"Aspek regulasi: {_reg_summary_from_payload(reg_payload)}")
         evidence["regulation"] = {
             "sources": reg_answer.get("sources", [])[:3],
         }
@@ -422,7 +797,7 @@ def _handle_fusion_query(req: OceanAskRequest):
         for s in reg_answer.get("sources", [])[:2]:
             sources.append(s)
 
-    if not parts:
+    if not evidence:
         return None
 
     dedup_sources: List[Dict[str, Any]] = []
@@ -434,6 +809,14 @@ def _handle_fusion_query(req: OceanAskRequest):
         seen.add(key)
         dedup_sources.append(s)
 
+    confidence = _fusion_confidence(needs, evidence)
+
+    narrative = _build_multi_intent_narrative(
+        req=req,
+        evidence=evidence,
+        needs=needs,
+    )
+
     return {
         "ok": True,
         "question": req.question,
@@ -444,15 +827,10 @@ def _handle_fusion_query(req: OceanAskRequest):
         "mode": req.mode,
         "query_type": "fusion_multi_brain",
         "topics": active,
-        "answer": {
-            "headline": "Jawaban gabungan berhasil disusun.",
-            "summary": "\n\n".join(parts),
-            "recommendation": "Gunakan jawaban ini sebagai pembacaan gabungan antara kondisi laut, data referensi, relasi wilayah, dan regulasi bila tersedia.",
-            "caution": "Untuk keputusan operasional, tetap padukan dengan pengamatan lapangan dan sumber resmi terkait.",
-        },
+        "answer": narrative,
         "evidence": evidence,
         "scores": {
-            "confidence_score": 0.90,
+            "confidence_score": confidence,
         },
         "explanation": explanations[:5],
         "data_status": {
@@ -464,8 +842,34 @@ def _handle_fusion_query(req: OceanAskRequest):
     }
 
 
+def _looks_like_ocean_condition_query(question: str) -> bool:
+    q = (question or "").lower()
+
+    ocean_keywords = [
+        "kondisi laut",
+        "bagaimana kondisi laut",
+        "bagaimana laut",
+        "aman melaut",
+        "aman",
+        "gelombang",
+        "ombak",
+        "angin",
+        "arus",
+        "sst",
+        "suhu laut",
+        "chlorophyll",
+        "chl",
+        "hari ini",
+        "minggu ini",
+        "tren",
+        "trend",
+    ]
+
+    return any(k in q for k in ocean_keywords)
+
 @router.post("/ask")
-def ask_ocean(req: OceanAskRequest):
+def ask_ocean(req: OceanAskRequest = Body(...)):
+     
     # 0) fusion query dulu
     fusion = _handle_fusion_query(req)
     if fusion:
@@ -577,7 +981,48 @@ def ask_ocean(req: OceanAskRequest):
 
     trend_metric = _pick_trend_metric(intent, metric)
 
+    # selalu siapkan spatial dulu
+    spatial = resolve_region_spatial(region)
+
+    # default fallback: region-based
     today = get_ocean_today(region=region, context=req.context)
+
+    # kalau ada bbox, boleh upgrade ke sampling area
+    if spatial and spatial.get("bbox"):
+        try:
+            from app.services.spatial_sampling_service import sample_bbox_points
+
+            points = sample_bbox_points(spatial["bbox"], n=3)
+
+            samples = []
+            for lat, lon in points:
+                s = get_ocean_today(lat=lat, lon=lon, context=req.context)
+                if s:
+                    samples.append(s)
+
+            if samples:
+                def avg(key: str):
+                    vals = [x.get(key) for x in samples if x.get(key) is not None]
+                    return sum(vals) / len(vals) if vals else None
+
+                today = {
+                    "region": region,
+                    "date": samples[0].get("date"),
+                    "generated_at": samples[0].get("generated_at"),
+                    "sst_c": avg("sst_c"),
+                    "chl_mg_m3": avg("chl_mg_m3"),
+                    "sal_psu": avg("sal_psu"),
+                    "wind_ms": avg("wind_ms"),
+                    "wave_m": avg("wave_m"),
+                    "ssh_cm": avg("ssh_cm"),
+                    "stale": samples[0].get("stale", True),
+                    "completeness": samples[0].get("completeness", "low"),
+                    "sampling_points": len(samples),
+                }
+        except Exception:
+            # kalau sampling gagal, tetap pakai fallback region-based
+            pass
+
     fgi = get_fgi_today(region=region)
     trend = get_trend_summary(region=region, metric=trend_metric)
 
@@ -603,6 +1048,23 @@ def ask_ocean(req: OceanAskRequest):
         fgi=fgi,
         trend=trend,
         reasoning=reasoning,
+    )
+
+    if spatial:
+        built["evidence"]["spatial"] = spatial
+
+    # Fusion v9: narrative berbasis data nyata
+    narrative_today = {
+        **today,
+        "fgi_score": fgi.get("fgi_score") if isinstance(fgi, dict) else None,
+        "trend": trend.get("trend") if isinstance(trend, dict) else None,
+    }
+
+    built["answer"] = build_ocean_narrative(
+       region=region,
+       today=narrative_today,
+       spatial=spatial,
+       persona=req.persona,
     )
 
     return OceanAskResponse(
