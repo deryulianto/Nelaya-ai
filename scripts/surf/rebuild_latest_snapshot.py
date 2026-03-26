@@ -331,6 +331,9 @@ def main():
     }
 
     DER.mkdir(parents=True, exist_ok=True)
+    payload["date_utc"] = payload.get("date_utc") or day
+    payload["valid_at"] = payload.get("valid_at") or payload.get("valid_utc") or payload.get("generated_at")
+    payload["valid_utc"] = payload.get("valid_utc") or payload.get("valid_at")
     atomic_write(DER / f"surf_wave_snapshot_{day}.json", payload)
     atomic_write(DER / "surf_wave_snapshot_latest.json", payload)
 

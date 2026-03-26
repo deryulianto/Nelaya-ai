@@ -59,3 +59,4 @@ echo "[DONE] all downloads attempted."
 # build + refresh signals for dashboard
 python scripts/build_earth_signals_from_raw.py || true
 python scripts/update_signals_today.py || true
+python scripts/surf/rebuild_latest_snapshot.py || true
