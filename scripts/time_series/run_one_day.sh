@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DAY="${1:-}"
-METRICS=${METRICS:-sst,chlorophyll,current,temp3d,temp_profile}
+METRICS=${METRICS:-sst,chlorophyll,current,temp3d,temp_profile,sal3d,sal_profile}
 
 if [[ -z "${DAY}" ]]; then
   echo "Usage: $0 YYYY-MM-DD [metrics_csv]"
@@ -90,6 +90,16 @@ run_temp_profile() {
     --config "${CFG}" --date "${DAY}" --var3d "temp3d" --max-depth 200 --step 10
 }
 
+run_sal_profile() {
+  echo "  [RUN] derive sal_profile from sal3d (cm)"
+  "${PY_CM}" "${ROOT_DIR}/scripts/time_series/04_make_sal_profile.py" \
+    --config "${CFG}" \
+    --date "${DAY}" \
+    --var3d sal3d \
+    --max-depth 200 \
+    --step 10 \
+    --var-name so
+}
 
 
 run_update() {
@@ -158,6 +168,33 @@ for metric in "${METRIC_ARR[@]}"; do
     echo "  [OK] temp_profile ${DAY} (derived)"
     continue
   fi
+  
+  if [[ "${metric}" == "sal_profile" ]]; then
+  if [[ ! -f "${ROOT_DIR}/data/time_series/aceh/banda_aceh_aceh_besar/sal3d/raw/sal3d_raw_${DAY}.nc" ]]; then
+    echo "  [RUN] fetch sal3d first (needed by sal_profile)"
+    run_step "sal3d" "fetch" "01_fetch_daily.py"
+    rc=$?
+    if [[ $rc -ne 0 ]]; then
+      echo "  [FAIL] fetch rc=${rc} metric=sal3d (needed by sal_profile) day=${DAY}"
+      return $rc
+    fi
+  fi
+
+  run_sal_profile
+  rc=$?
+  if [[ $rc -ne 0 ]]; then
+    echo "  [FAIL] derive sal_profile rc=${rc} day=${DAY}"
+    return $rc
+  fi
+
+  echo "  [OK] sal_profile ${DAY} (derived)"
+  return 0
+fi 
+
+
+
+
+
 
   # ===== DEFAULT FLOW (grid metrics) =====
   # fetch

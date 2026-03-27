@@ -47,3 +47,7 @@ vars:
     min_depth: 0
     max_depth: 200
 
+  sal3d:
+    dataset_id: "cmems_mod_glo_phy-so_anfc_0.083deg_P1D-m"
+    var_name: "so"
+    unit: "psu"
