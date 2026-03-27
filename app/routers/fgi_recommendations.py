@@ -10,7 +10,6 @@ from fastapi import APIRouter, HTTPException
 
 from app.schemas.fgi_recommend import (
     OptimizeOriginRequest,
-    OptimizeOriginResponse,
     SpotOut,
 )
 
@@ -26,6 +25,138 @@ router = APIRouter(prefix="/api/v1/fgi/recommendations", tags=["FGI Recommendati
 ROOT = Path(__file__).resolve().parents[2]
 FGI_DAILY_DIR = ROOT / "data" / "fgi_daily"
 FGI_GRID_DIR = ROOT / "data" / "fgi_map_grid"
+
+
+def _freshness_status(date_utc: str | None, ref_day_utc: str | None = None) -> str:
+    try:
+        if not date_utc:
+            return "unknown"
+        data_day = datetime.strptime(str(date_utc)[:10], "%Y-%m-%d").date()
+        ref_day = (
+            datetime.strptime(str(ref_day_utc)[:10], "%Y-%m-%d").date()
+            if ref_day_utc
+            else datetime.now(timezone.utc).date()
+        )
+        age = (ref_day - data_day).days
+        if age <= 0:
+            return "fresh"
+        if age <= 2:
+            return "recent"
+        return "stale"
+    except Exception:
+        return "unknown"
+
+
+def _confidence_recommendation(
+    candidate_count: int,
+    used_budget_filter: bool,
+    fgir_enabled: bool,
+) -> str:
+    if candidate_count >= 10 and fgir_enabled:
+        return "high"
+    if candidate_count >= 3:
+        return "medium"
+    if candidate_count >= 1:
+        return "low"
+    return "low"
+
+
+def _build_trust(
+    *,
+    source: str,
+    date_utc: str | None,
+    generated_at: str | None,
+    confidence: str,
+    basis_type: str,
+    mode: str,
+    candidate_count: int,
+) -> Dict[str, Any]:
+    freshness = _freshness_status(date_utc)
+    caveat = (
+        "Rekomendasi memadukan skor FGI-R, jarak, dan biaya operasi; bukan jaminan hasil tangkapan."
+        if basis_type == "rule_plus_model_recommendation"
+        else "Skor bersifat indikatif dan perlu dibaca bersama kondisi laut aktual."
+    )
+    return {
+        "source": source,
+        "date_utc": date_utc,
+        "generated_at": generated_at,
+        "freshness_status": freshness,
+        "confidence": confidence,
+        "basis_type": basis_type,
+        "mode": mode,
+        "candidate_count": candidate_count,
+        "caveat": caveat,
+    }
+
+
+def _spot_to_dict(s: SpotOut) -> Dict[str, Any]:
+    if hasattr(s, "model_dump"):
+        return s.model_dump()
+    if hasattr(s, "dict"):
+        return s.dict()
+    return dict(s)
+
+
+def _origin_to_dict(origin: Any) -> Dict[str, Any]:
+    if hasattr(origin, "model_dump"):
+        return origin.model_dump()
+    if hasattr(origin, "dict"):
+        return origin.dict()
+    return dict(origin)
+
+
+def _build_port_rank_items(origin: Any, ranked: List[SpotOut], cheapest: SpotOut | None, best_fgi: SpotOut | None, budget_rp: float | None) -> List[Dict[str, Any]]:
+    if not origin:
+        return []
+    cheapest_cost = float(cheapest.fuel_cost_rp or 0.0) if cheapest else None
+    best_fgi_value = float(best_fgi.fgi or 0.0) if best_fgi else None
+    within_budget = None if budget_rp is None or cheapest_cost is None else cheapest_cost <= float(budget_rp)
+    over_budget_by_rp = None if budget_rp is None or cheapest_cost is None else max(0.0, cheapest_cost - float(budget_rp))
+    if cheapest_cost is None:
+        ui_badge = "No candidate"
+        ui_summary = "Belum ada spot yang lolos filter radius / FGI / budget."
+    else:
+        if within_budget is True:
+            ui_badge = "Within budget"
+        elif within_budget is False:
+            ui_badge = "Over budget"
+        else:
+            ui_badge = "Candidate"
+        ui_summary = (
+            f"Cheapest ~{round(cheapest_cost):,} Rp • "
+            f"Best FGI {best_fgi_value:.3f}" if best_fgi_value is not None else
+            f"Cheapest ~{round(cheapest_cost):,} Rp"
+        ).replace(",", ".")
+    return [{
+        "origin": _origin_to_dict(origin),
+        "n_spots": len(ranked),
+        "ui_badge": ui_badge,
+        "ui_summary": ui_summary,
+        "cheapest_cost_rp": cheapest_cost,
+        "best_fgi_value": best_fgi_value,
+        "within_budget": within_budget,
+        "over_budget_by_rp": over_budget_by_rp,
+        "cheapest": _spot_to_dict(cheapest) if cheapest else None,
+        "best_fgi": _spot_to_dict(best_fgi) if best_fgi else None,
+    }]
+
+
+def _suggest_budget(cheapest: SpotOut | None) -> Dict[str, Any]:
+    if not cheapest or cheapest.fuel_cost_rp is None:
+        return {
+            "suggested_budget_min_rp": None,
+            "suggested_budget_rounded_rp": None,
+            "suggested_budget_note": None,
+        }
+    min_rp = float(cheapest.fuel_cost_rp)
+    rounded = int(math.ceil(min_rp / 50000.0) * 50000)
+    return {
+        "suggested_budget_min_rp": round(min_rp, 2),
+        "suggested_budget_rounded_rp": rounded,
+        "suggested_budget_note": "Dibulatkan ke atas per 50 ribu untuk buffer operasional.",
+    }
+
 
 
 def _to_band(p: float) -> str:
@@ -290,8 +421,8 @@ def _pick_optimal_spot(spots: List[SpotOut]) -> SpotOut:
     return max(spots, key=utility)
 
 
-@router.post("/optimize-origin", response_model=OptimizeOriginResponse)
-def optimize_origin(req: OptimizeOriginRequest) -> OptimizeOriginResponse:
+@router.post("/optimize-origin")
+def optimize_origin(req: OptimizeOriginRequest) -> Dict[str, Any]:
     # date fallback
     date_used = req.date or req.date_utc
     if not date_used:
@@ -361,16 +492,33 @@ def optimize_origin(req: OptimizeOriginRequest) -> OptimizeOriginResponse:
         else:
             msg = "No candidate spots found (check radius / fgi_min / budget / source data)"
 
-        return OptimizeOriginResponse(
-            ok=False,
-            message=msg,
-            date=date_found,
-            generated_at=datetime.now(timezone.utc).isoformat(),
-            mode=req.mode,
-            constraints=cons.model_dump(),
-            chosen_origin=origin.model_dump(),
-            ranks=[],
-        )
+        generated_at = datetime.now(timezone.utc).isoformat()
+        suggested = _suggest_budget(min(rejected_by_budget, key=lambda s: float(s.fuel_cost_rp or 1e18)) if rejected_by_budget else None)
+        return {
+            "ok": False,
+            "message": msg,
+            "date": date_found,
+            "generated_at": generated_at,
+            "mode": req.mode,
+            "constraints": cons.model_dump(),
+            "chosen_origin": origin.model_dump(),
+            "chosen_best": None,
+            "chosen_cheapest": None,
+            "chosen_best_fgi": None,
+            "ranks": [],
+            "ranked_origins": [],
+            "recommendations": None,
+            **suggested,
+            "trust": _build_trust(
+                source=f"FGI geojson • {path.name}",
+                date_utc=date_found,
+                generated_at=generated_at,
+                confidence="low",
+                basis_type="rule_plus_model_recommendation",
+                mode="upstream",
+                candidate_count=0,
+            ),
+        }
 
     # ranking dasar -> sekarang berdasarkan FGI-R
     by_fgi = sorted(candidates, key=lambda s: (-float(s.fgi), float(s.fuel_cost_rp or 1e18)))
@@ -390,19 +538,48 @@ def optimize_origin(req: OptimizeOriginRequest) -> OptimizeOriginResponse:
     else:
         chosen_best = _pick_optimal_spot(candidates)
 
-    return OptimizeOriginResponse(
-        ok=True,
-        message=(
+    generated_at = datetime.now(timezone.utc).isoformat()
+    suggested = _suggest_budget(chosen_cheapest)
+    port_items = _build_port_rank_items(
+        origin=origin,
+        ranked=ranked,
+        cheapest=chosen_cheapest,
+        best_fgi=chosen_best_fgi,
+        budget_rp=cons.budget_rp,
+    )
+    return {
+        "ok": True,
+        "message": (
             f"ok • source={path.name} • date_used={date_found} "
             f"• candidates={len(candidates)} • fgir={'on' if HAS_FGIR else 'off'}"
         ),
-        date=date_found,
-        generated_at=datetime.now(timezone.utc).isoformat(),
-        mode=req.mode,
-        constraints=cons.model_dump(),
-        chosen_origin=origin.model_dump(),
-        chosen_best=chosen_best,
-        chosen_cheapest=chosen_cheapest,
-        chosen_best_fgi=chosen_best_fgi,
-        ranks=ranked,
-    )
+        "date": date_found,
+        "generated_at": generated_at,
+        "mode": req.mode,
+        "constraints": cons.model_dump(),
+        "chosen_origin": origin.model_dump(),
+        "chosen_best": _spot_to_dict(chosen_best),
+        "chosen_cheapest": _spot_to_dict(chosen_cheapest),
+        "chosen_best_fgi": _spot_to_dict(chosen_best_fgi),
+        "ranks": [_spot_to_dict(s) for s in ranked],
+        "ranked_origins": port_items,
+        "recommendations": {
+            "chosen_origin": origin.model_dump(),
+            "chosen_best": _spot_to_dict(chosen_best),
+            "candidate_count": len(candidates),
+        },
+        **suggested,
+        "trust": _build_trust(
+            source=f"FGI geojson • {path.name}",
+            date_utc=date_found,
+            generated_at=generated_at,
+            confidence=_confidence_recommendation(
+                candidate_count=len(candidates),
+                used_budget_filter=(req.mode == "budget" and cons.budget_rp is not None),
+                fgir_enabled=HAS_FGIR,
+            ),
+            basis_type="rule_plus_model_recommendation",
+            mode="upstream",
+            candidate_count=len(candidates),
+        ),
+    }

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
-from pathlib import Path
 from datetime import datetime, timezone
+from pathlib import Path
 import json
 import re
+
+from fastapi import APIRouter, HTTPException, Query
 
 ROOT = Path(__file__).resolve().parents[2]
 GRID_DIR = ROOT / "data" / "fgi_map_grid"
@@ -27,13 +28,11 @@ def classify_osi(osi: float) -> str:
 
 
 def compute_osi(p: dict):
-    # support format grid baru
     sst = p.get("sst_c")
     chl = p.get("chl_mg_m3")
     sal = p.get("sal_psu")
     score = p.get("score")
 
-    # support format lama (v0 box map)
     means = p.get("means") if isinstance(p.get("means"), dict) else {}
     fgi = p.get("fgi") if isinstance(p.get("fgi"), dict) else {}
 
@@ -131,6 +130,57 @@ def safe_date(v: object) -> str | None:
     return s[:10] if len(s) >= 10 else s
 
 
+def _freshness_status(date_utc: str | None, generated_at: str | None = None) -> str:
+    ref = datetime.now(timezone.utc).date()
+    target = None
+    for raw in (date_utc, generated_at):
+        s = safe_date(raw)
+        if not s:
+            continue
+        try:
+            target = datetime.strptime(s, "%Y-%m-%d").date()
+            break
+        except Exception:
+            continue
+    if target is None:
+        return "unknown"
+    delta = (ref - target).days
+    if delta <= 0:
+        return "fresh"
+    if delta <= 2:
+        return "recent"
+    return "stale"
+
+
+def _confidence_from_feature_count(n: int) -> str:
+    if n >= 100:
+        return "high"
+    if n >= 20:
+        return "medium"
+    return "low"
+
+
+def _build_trust(*, source: str, date_utc: str | None, generated_at: str | None, feature_count: int, mode: str, basis_type: str) -> dict:
+    freshness = _freshness_status(date_utc, generated_at)
+    confidence = _confidence_from_feature_count(feature_count)
+    caveat = (
+        "OSI map adalah indeks spasial turunan dari grid FGI/env signals, bukan pengukuran langsung kesehatan ekosistem pada setiap titik."
+        if mode == "map"
+        else "Riwayat OSI dibangun dari grid harian yang tersedia; celah file atau perubahan coverage dapat memengaruhi kontinuitas seri."
+    )
+    return {
+        "source": source,
+        "date_utc": date_utc,
+        "generated_at": generated_at,
+        "freshness_status": freshness,
+        "confidence": confidence,
+        "basis_type": basis_type,
+        "mode": mode,
+        "feature_count": feature_count,
+        "caveat": caveat,
+    }
+
+
 def load_json(p: Path) -> dict:
     return json.loads(p.read_text(encoding="utf-8"))
 
@@ -175,7 +225,6 @@ def build_snapshot_from_fc(fc: dict, fallback_date: str | None, generated_at: st
             continue
 
         lon, lat = lonlat
-
         result = compute_osi(props)
         if result is None:
             continue
@@ -222,6 +271,14 @@ def build_snapshot_from_fc(fc: dict, fallback_date: str | None, generated_at: st
             "anomaly_summary": {"high_count": 0, "low_count": 0},
             "hotspot_regions": [],
             "map_narrative": [],
+            "trust": _build_trust(
+                source="FGI grid substrate • latest.geojson",
+                date_utc=fallback_date,
+                generated_at=generated_at,
+                feature_count=0,
+                mode="history-snapshot",
+                basis_type="derived_spatial_index",
+            ),
         }
         if include_geojson:
             snap["geojson"] = {"type": "FeatureCollection", "features": []}
@@ -234,14 +291,12 @@ def build_snapshot_from_fc(fc: dict, fallback_date: str | None, generated_at: st
     hotspot_count = 0
     high_anom = 0
     low_anom = 0
-
     region_buckets: dict[str, list[float]] = {}
     hotspot_buckets: dict[str, int] = {}
 
     for feat in features:
         osi = feat["properties"]["osi"]
         region_hint = feat["properties"]["region_hint"]
-
         region_buckets.setdefault(region_hint, []).append(osi)
 
         is_hotspot = osi >= max(75.0, p90)
@@ -270,7 +325,6 @@ def build_snapshot_from_fc(fc: dict, fallback_date: str | None, generated_at: st
             "class": classify_osi(m),
             "count": len(vals),
         })
-
     region_summary = sorted(region_summary, key=lambda x: x["mean_osi"], reverse=True)
 
     hotspot_regions = sorted(
@@ -279,11 +333,7 @@ def build_snapshot_from_fc(fc: dict, fallback_date: str | None, generated_at: st
         reverse=True,
     )
 
-    anomaly_summary = {
-        "high_count": high_anom,
-        "low_count": low_anom,
-    }
-
+    anomaly_summary = {"high_count": high_anom, "low_count": low_anom}
     map_narrative = build_map_narrative(region_summary, anomaly_summary, mean_osi)
     latest_data_date = max(data_dates) if data_dates else fallback_date
 
@@ -303,13 +353,18 @@ def build_snapshot_from_fc(fc: dict, fallback_date: str | None, generated_at: st
         "anomaly_summary": anomaly_summary,
         "hotspot_regions": hotspot_regions,
         "map_narrative": map_narrative,
+        "trust": _build_trust(
+            source=f"FGI grid substrate • {fc.get('name') or 'geojson'}",
+            date_utc=latest_data_date,
+            generated_at=generated_at,
+            feature_count=len(features),
+            mode="history-snapshot",
+            basis_type="derived_spatial_index",
+        ),
     }
 
     if include_geojson:
-        snap["geojson"] = {
-            "type": "FeatureCollection",
-            "features": features,
-        }
+        snap["geojson"] = {"type": "FeatureCollection", "features": features}
 
     return snap
 
@@ -334,6 +389,14 @@ def osi_map():
         "anomaly_summary": snap.get("anomaly_summary", {}),
         "hotspot_regions": snap.get("hotspot_regions", []),
         "map_narrative": snap.get("map_narrative", []),
+        "trust": _build_trust(
+            source=f"FGI grid substrate • {LATEST.name}",
+            date_utc=snap.get("date"),
+            generated_at=snap.get("generated_at"),
+            feature_count=snap.get("feature_count", 0),
+            mode="map",
+            basis_type="derived_spatial_index",
+        ),
     }
 
 
@@ -348,7 +411,6 @@ def osi_history(days: int = Query(7, ge=1, le=60)):
 
     items = sorted(items, key=lambda x: x[0], reverse=True)[:days]
 
-    # fallback kalau file harian belum ada, tapi latest.geojson ada
     if not items:
         if not LATEST.exists():
             raise HTTPException(404, "No OSI history files found")
@@ -362,6 +424,14 @@ def osi_history(days: int = Query(7, ge=1, le=60)):
             "mode": "latest-fallback",
             "days": int(days),
             "snapshots": [snap],
+            "trust": _build_trust(
+                source=f"FGI grid substrate • {LATEST.name}",
+                date_utc=snap.get("date"),
+                generated_at=snap.get("generated_at"),
+                feature_count=snap.get("feature_count", 0),
+                mode="history",
+                basis_type="derived_spatial_index",
+            ),
         }
 
     snapshots = []
@@ -371,9 +441,18 @@ def osi_history(days: int = Query(7, ge=1, le=60)):
         snap = build_snapshot_from_fc(fc, fallback_date=d, generated_at=generated_at, include_geojson=True)
         snapshots.append(snap)
 
+    top = snapshots[0] if snapshots else {}
     return {
         "ok": True,
         "mode": "history-files",
         "days": int(days),
         "snapshots": snapshots,
+        "trust": _build_trust(
+            source=f"FGI grid substrate • {GRID_DIR.name}",
+            date_utc=top.get("date"),
+            generated_at=top.get("generated_at"),
+            feature_count=top.get("feature_count", 0),
+            mode="history",
+            basis_type="derived_spatial_index",
+        ),
     }

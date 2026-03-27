@@ -17,6 +17,54 @@ FGI_DAILY_DIR = ROOT / "data" / "fgi_daily"
 FGI_GRID_DIR = ROOT / "data" / "fgi_map_grid"
 
 
+def _freshness_status(date_utc: str | None, ref_day_utc: str | None = None) -> str:
+    try:
+        if not date_utc:
+            return "unknown"
+        data_day = datetime.strptime(str(date_utc)[:10], "%Y-%m-%d").date()
+        ref_day = (
+            datetime.strptime(str(ref_day_utc)[:10], "%Y-%m-%d").date()
+            if ref_day_utc
+            else datetime.now(timezone.utc).date()
+        )
+        age = (ref_day - data_day).days
+        if age <= 0:
+            return "fresh"
+        if age <= 2:
+            return "recent"
+        return "stale"
+    except Exception:
+        return "unknown"
+
+
+def _confidence_from_count(count: int, rumpon_loaded: int) -> str:
+    if count >= 50 and rumpon_loaded > 0:
+        return "high"
+    if count >= 10:
+        return "medium"
+    return "low"
+
+
+def _build_trust(*, source: str, date_utc: str | None, generated_at: str | None, confidence: str, basis_type: str, mode: str, feature_count: int) -> Dict[str, Any]:
+    caveat = (
+        "FGI-R menambahkan pengaruh rumpon ke skor lingkungan; hasilnya tetap indikatif, bukan jaminan tangkapan."
+        if basis_type == "rule_plus_model_recommendation"
+        else "Output ini adalah sintesis model dan aturan, dan perlu dibaca bersama kondisi laut aktual."
+    )
+    return {
+        "source": source,
+        "date_utc": date_utc,
+        "generated_at": generated_at,
+        "freshness_status": _freshness_status(date_utc),
+        "confidence": confidence,
+        "basis_type": basis_type,
+        "mode": mode,
+        "feature_count": feature_count,
+        "caveat": caveat,
+    }
+
+
+
 def _find_fgi_map_geojson(date_ymd: str, max_back_days: int = 14) -> Tuple[str, Path]:
     try:
         base = datetime.strptime(date_ymd[:10], "%Y-%m-%d").date()
@@ -62,11 +110,21 @@ def _pick_fgi_r(feature: Dict[str, Any]) -> float:
 @router.get("/ping")
 def ping():
     rumpon = load_rumpon_points()
+    generated_at = datetime.now(timezone.utc).isoformat()
     return {
         "status": "ok",
         "message": "FGI-R module alive",
         "rumpon_loaded": len(rumpon),
         "formula_version": FORMULA_VERSION,
+        "trust": _build_trust(
+            source="FGI-R module healthcheck",
+            date_utc=datetime.now(timezone.utc).date().isoformat(),
+            generated_at=generated_at,
+            confidence="high",
+            basis_type="language_summary",
+            mode="module",
+            feature_count=len(rumpon),
+        ),
     }
 
 
@@ -124,9 +182,10 @@ def get_fgi_r_map(
     if effective_top_n is not None:
         enriched = enriched[: int(effective_top_n)]
 
+    generated_at = datetime.now(timezone.utc).isoformat()
     return {
         "type": "FeatureCollection",
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": generated_at,
         "meta": {
             "date_used": date_used,
             "source_file": path.name,
@@ -147,6 +206,15 @@ def get_fgi_r_map(
             },
         },
         "features": enriched,
+        "trust": _build_trust(
+            source=f"FGI-R geojson • {path.name}",
+            date_utc=date_used,
+            generated_at=generated_at,
+            confidence=_confidence_from_count(len(enriched), len(rumpon_points)),
+            basis_type="rule_plus_model_recommendation",
+            mode=mode,
+            feature_count=len(enriched),
+        ),
     }
 
 
@@ -203,12 +271,22 @@ def compare_modes(
     env_rows.sort(key=lambda x: float(x.get("fgi_r") or 0.0), reverse=True)
     full_rows.sort(key=lambda x: float(x.get("fgi_r") or 0.0), reverse=True)
 
+    generated_at = datetime.now(timezone.utc).isoformat()
     return {
         "ok": True,
         "date_used": date_used,
         "formula_version": FORMULA_VERSION,
         "env_only_top": env_rows[:top_n],
         "full_top": full_rows[:top_n],
+        "trust": _build_trust(
+            source=f"FGI-R compare • {path.name}",
+            date_utc=date_used,
+            generated_at=generated_at,
+            confidence=_confidence_from_count(min(len(env_rows), len(full_rows)), len(rumpon_points)),
+            basis_type="rule_plus_model_recommendation",
+            mode="compare",
+            feature_count=min(len(env_rows), len(full_rows)),
+        ),
     }
 
 @router.get("/hotspots")
@@ -264,6 +342,7 @@ def get_fgi_r_hotspots(
             }
         )
 
+    generated_at = datetime.now(timezone.utc).isoformat()
     return {
         "ok": True,
         "date_used": date_used,
@@ -274,4 +353,13 @@ def get_fgi_r_hotspots(
             "not_yet_explicitly_included": ["sst_gradient", "current_speed", "chl_gradient"],
         },
         "hotspots": hotspots,
+        "trust": _build_trust(
+            source=f"FGI-R hotspots • {path.name}",
+            date_utc=date_used,
+            generated_at=generated_at,
+            confidence=_confidence_from_count(len(hotspots), len(rumpon_points)),
+            basis_type="rule_plus_model_recommendation",
+            mode="hotspots",
+            feature_count=len(hotspots),
+        ),
     }

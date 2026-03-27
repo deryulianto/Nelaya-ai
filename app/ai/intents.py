@@ -83,4 +83,23 @@ REGION_ALIASES = {
     "lampulo": "Banda Aceh",
     "ulee lheue": "Banda Aceh",
     "lhoknga": "Aceh Besar",
+    # 🔥 TAMBAHAN WAJIB
+    "singkil": "Aceh Singkil",
+    "aceh singkil": "Aceh Singkil",
+    "aceh": "Aceh",
+
+    # optional (biar makin pintar)
+    "sabangkota": "Sabang",
+    "sabang": "Sabang",
+    "lhokseumawe": "Lhokseumawe",
+    "langsa": "Langsa",
+    "aceh jaya": "Aceh Jaya",
+    "aceh barat": "Aceh Barat",
+    "aceh timur": "Aceh Timur",
+    "aceh utara": "Aceh Utara",
+    "aceh selatan": "Aceh Selatan",
+    "nagan raya": "Nagan Raya",
+    "aceh tamiang": "Aceh Tamiang", 
+    "pidie": "Pidie",
+    
 }

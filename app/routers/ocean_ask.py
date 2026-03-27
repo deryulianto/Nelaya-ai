@@ -9,7 +9,6 @@ from app.ai.router import route_question
 from app.ai.reasoner import run_reasoning
 from app.schemas.ocean_ask import OceanAskRequest, OceanAskResponse
 from app.services.ocean_data_service import get_fgi_today, get_ocean_today
-from app.services.timeseries_service import get_trend_summary
 from app.services.regulation_engine import RegulationEngine
 from app.services.knowledge_graph_service import KnowledgeGraphService
 from app.services.reference_data_service import (
@@ -23,7 +22,11 @@ from app.services.reference_data_service import (
 )
 from app.services.region_resolver_service import resolve_region_spatial
 from app.services.ocean_narrative_service import build_ocean_narrative
-
+from app.services.timeseries_service import (
+    get_trend_summary,
+    compare_this_week_vs_last_week,
+    compare_today_vs_yesterday,    
+)
 
 router = APIRouter(prefix="/api/v1/ocean", tags=["Ocean Brain"])
 
@@ -698,7 +701,7 @@ def _handle_fusion_query(req: OceanAskRequest):
     explanations: List[str] = []
     sources: List[Dict[str, Any]] = []
 
-    region = req.region or "Aceh"
+    region = parsed.get("region") or req.region or "Aceh"
 
     # spatial resolve
     spatial = resolve_region_spatial(req.region)
@@ -867,20 +870,321 @@ def _looks_like_ocean_condition_query(question: str) -> bool:
 
     return any(k in q for k in ocean_keywords)
 
+def _build_trend_analysis_answer(
+    req: OceanAskRequest,
+    region: str,
+    metric: str | None,
+) -> dict:
+    q = (req.question or "").lower()
+    metric = metric or "sst"
+
+    metric_label_map = {
+        "sst": "suhu laut",
+        "chlorophyll": "chlorophyll",
+        "chl": "chlorophyll",
+        "current": "arus",
+        "wave": "gelombang",
+        "wind": "angin",
+        "fgi": "potensi ikan",
+    }
+    metric_label = metric_label_map.get(metric, metric)
+
+    # default compare: minggu ini vs minggu lalu
+    if "minggu ini" in q and "minggu lalu" in q:
+        comp = compare_this_week_vs_last_week(region, metric)
+
+        if not comp.get("enough_data"):
+            return {
+                "ok": True,
+                "question": req.question,
+                "intent": "trend_analysis",
+                "sub_intents": [],
+                "region": region,
+                "persona": req.persona,
+                "mode": req.mode,
+                "answer": {
+                    "headline": f"Data historis {metric_label} belum cukup untuk perbandingan mingguan.",
+                    "summary": f"NELAYA-AI belum menemukan cukup data untuk membandingkan {metric_label} minggu ini dengan minggu lalu di {region}.",
+                    "recommendation": "Gunakan data harian terbaru terlebih dahulu sambil melengkapi histori time series.",
+                    "caution": "Perbandingan mingguan memerlukan data historis yang cukup dan konsisten.",
+                },
+                "evidence": comp,
+                "scores": {"confidence_score": 0.55},
+                "explanation": ["Data historis mingguan belum memadai."],
+                "data_status": {"source_type": "csv_timeseries"},
+            }
+
+        delta = comp["delta"] or 0.0
+        direction = comp["direction"]
+        this_week_avg = comp["this_week_avg"]
+        last_week_avg = comp["last_week_avg"]
+
+        if metric == "sst":
+            if direction == "naik":
+                headline = f"{metric_label.capitalize()} minggu ini cenderung lebih hangat."
+                summary = (
+                    f"Rerata {metric_label} minggu ini di {region} sekitar {this_week_avg:.2f} °C, "
+                    f"lebih tinggi dibanding minggu lalu yang sekitar {last_week_avg:.2f} °C. "
+                    f"Selisihnya sekitar {abs(delta):.2f} °C, sehingga kondisi minggu ini dapat dibaca lebih panas secara ringan."
+                )
+            elif direction == "turun":
+                headline = f"{metric_label.capitalize()} minggu ini cenderung lebih rendah."
+                summary = (
+                    f"Rerata {metric_label} minggu ini di {region} sekitar {this_week_avg:.2f} °C, "
+                    f"lebih rendah dibanding minggu lalu yang sekitar {last_week_avg:.2f} °C. "
+                    f"Selisihnya sekitar {abs(delta):.2f} °C."
+                )
+            else:
+                headline = f"{metric_label.capitalize()} minggu ini relatif stabil."
+                summary = (
+                    f"Rerata {metric_label} minggu ini di {region} sekitar {this_week_avg:.2f} °C, "
+                    f"hampir setara dengan minggu lalu yang sekitar {last_week_avg:.2f} °C. "
+                    f"Perubahannya sekitar {abs(delta):.2f} °C, sehingga masih tergolong stabil."
+                )
+        else:
+            if direction == "naik":
+                headline = f"{metric_label.capitalize()} minggu ini cenderung meningkat."
+            elif direction == "turun":
+                headline = f"{metric_label.capitalize()} minggu ini cenderung menurun."
+            else:
+                headline = f"{metric_label.capitalize()} minggu ini relatif stabil."
+
+            summary = (
+                f"Rerata {metric_label} minggu ini di {region} sekitar {this_week_avg:.2f}, "
+                f"dibanding minggu lalu sekitar {last_week_avg:.2f}. "
+                f"Selisihnya sekitar {abs(delta):.2f} dengan arah {direction}."
+            )
+
+        return {
+            "ok": True,
+            "question": req.question,
+            "intent": "trend_analysis",
+            "sub_intents": [],
+            "region": region,
+            "persona": req.persona,
+            "mode": req.mode,
+            "answer": {
+                "headline": headline,
+                "summary": summary,
+                "recommendation": "Gunakan pembacaan komparatif ini bersama indikator laut lain bila ingin melihat implikasi operasionalnya.",
+                "caution": "Perbandingan mingguan menunjukkan kecenderungan umum, bukan kepastian kondisi di setiap titik laut.",
+            },
+            "evidence": comp,
+            "scores": {"confidence_score": 0.9},
+            "explanation": [
+                f"Perbandingan mingguan menunjukkan arah {direction}.",
+            ],
+            "data_status": {"source_type": "csv_timeseries"},
+        }
+
+    # compare: hari ini vs kemarin
+    if "hari ini" in q and "kemarin" in q:
+        comp = compare_today_vs_yesterday(region, metric)
+
+        if not comp.get("enough_data"):
+            return {
+                "ok": True,
+                "question": req.question,
+                "intent": "trend_analysis",
+                "sub_intents": [],
+                "region": region,
+                "persona": req.persona,
+                "mode": req.mode,
+                "answer": {
+                    "headline": f"Data historis {metric_label} belum cukup untuk perbandingan harian.",
+                    "summary": f"NELAYA-AI belum menemukan cukup data untuk membandingkan {metric_label} hari ini dengan kemarin di {region}.",
+                    "recommendation": "Gunakan pembacaan kondisi terbaru sambil melengkapi histori harian.",
+                    "caution": "Perbandingan harian memerlukan data minimal dua hari yang valid.",
+                },
+                "evidence": comp,
+                "scores": {"confidence_score": 0.55},
+                "explanation": ["Data historis harian belum memadai."],
+                "data_status": {"source_type": "csv_timeseries"},
+            }
+
+        delta = comp["delta"] or 0.0
+        direction = comp["direction"]
+        today_v = comp["today"]
+        yday_v = comp["yesterday"]
+
+        headline = f"{metric_label.capitalize()} hari ini {direction} dibanding kemarin."
+        summary = (
+            f"Nilai {metric_label} hari ini di {region} sekitar {today_v:.2f}, "
+            f"sedangkan kemarin sekitar {yday_v:.2f}. "
+            f"Selisihnya sekitar {abs(delta):.2f}, sehingga perubahannya dibaca {direction}."
+        )
+
+        return {
+            "ok": True,
+            "question": req.question,
+            "intent": "trend_analysis",
+            "sub_intents": [],
+            "region": region,
+            "persona": req.persona,
+            "mode": req.mode,
+            "answer": {
+                "headline": headline,
+                "summary": summary,
+                "recommendation": "Padukan pembacaan ini dengan indikator laut lain jika ingin melihat dampaknya terhadap aktivitas lapangan.",
+                "caution": "Perbandingan harian dapat berubah cepat bila ada dinamika cuaca atau laut yang kuat.",
+            },
+            "evidence": comp,
+            "scores": {"confidence_score": 0.88},
+            "explanation": [
+                f"Perbandingan harian menunjukkan arah {direction}.",
+            ],
+            "data_status": {"source_type": "csv_timeseries"},
+        }
+
+    # fallback trend summary
+    trend = get_trend_summary(region, metric)
+    return {
+        "ok": True,
+        "question": req.question,
+        "intent": "trend_analysis",
+        "sub_intents": [],
+        "region": region,
+        "persona": req.persona,
+        "mode": req.mode,
+        "answer": {
+            "headline": f"Tren {metric_label} berhasil dibaca.",
+            "summary": f"Pembacaan tren {metric_label} di {region} saat ini cenderung {trend.get('trend', 'unknown')}.",
+            "recommendation": "Gunakan tren ini sebagai pembacaan awal sebelum melihat perbandingan periode yang lebih spesifik.",
+            "caution": "Interpretasi tren tetap bergantung pada panjang dan kualitas data historis.",
+        },
+        "evidence": trend,
+        "scores": {"confidence_score": 0.8},
+        "explanation": [f"Tren umum saat ini: {trend.get('trend', 'unknown')}."],
+        "data_status": {"source_type": "csv_timeseries"},
+    }
+
+def _build_fgi_answer(
+    req: OceanAskRequest,
+    region: str,
+    today: Dict[str, Any],
+    fgi: Dict[str, Any],
+) -> dict:
+    score = fgi.get("fgi_score")
+    band = fgi.get("band") or "unknown"
+
+    if score is None:
+        headline = "FGI belum terbaca dengan cukup kuat."
+        summary = (
+            f"NELAYA-AI belum menemukan skor FGI yang memadai untuk {region} pada pembacaan ini."
+        )
+        confidence = 0.55
+    else:
+        if score >= 0.75:
+            headline = "FGI berada pada level tinggi."
+            summary = (
+                f"Skor Fish Ground Index (FGI) untuk {region} sekitar {score:.3f}, "
+                "yang mengarah pada peluang relatif penangkapan ikan yang cukup baik."
+            )
+        elif score >= 0.50:
+            headline = "FGI berada pada level sedang."
+            summary = (
+                f"Skor Fish Ground Index (FGI) untuk {region} sekitar {score:.3f}, "
+                "yang menunjukkan peluang relatif penangkapan ikan berada pada tingkat menengah."
+            )
+        else:
+            headline = "FGI berada pada level rendah."
+            summary = (
+                f"Skor Fish Ground Index (FGI) untuk {region} sekitar {score:.3f}, "
+                "sehingga peluang relatif penangkapan ikan saat ini masih tergolong rendah."
+            )
+        confidence = 0.90
+
+    return {
+        "ok": True,
+        "question": req.question,
+        "intent": "fgi_indicator",
+        "sub_intents": [],
+        "region": region,
+        "persona": req.persona,
+        "mode": req.mode,
+        "answer": {
+            "headline": headline,
+            "summary": summary,
+            "recommendation": "Baca FGI bersama suhu laut, klorofil, angin, dan pengamatan lapangan sebelum mengambil keputusan.",
+            "caution": "FGI adalah indikator peluang relatif, bukan jaminan hasil tangkapan di setiap titik dan waktu.",
+        },
+        "evidence": {
+            "fgi_score": score,
+            "band": band,
+            "sst_c": today.get("sst_c"),
+            "chl_mg_m3": today.get("chl_mg_m3"),
+            "wind_ms": today.get("wind_ms"),
+            "wave_m": today.get("wave_m"),
+        },
+        "scores": {
+            "confidence_score": confidence,
+        },
+        "explanation": [
+            "FGI dibaca sebagai indikator peluang relatif area penangkapan ikan.",
+            "Interpretasi terbaik dilakukan bersama indikator oseanografi lain.",
+        ],
+        "data_status": {
+            "date": today.get("date"),
+            "generated_at": today.get("generated_at"),
+            "stale": today.get("stale", True),
+            "completeness": today.get("completeness", "low"),
+            "source_type": "ocean_data",
+        },
+    }
+
+
+
 @router.post("/ask")
 def ask_ocean(req: OceanAskRequest = Body(...)):
-     
-    # 0) fusion query dulu
-    fusion = _handle_fusion_query(req)
+    # 0) route utama seawal mungkin
+    parsed = route_question(
+        question=req.question,
+        region=req.region,
+        persona=req.persona,
+    )
+
+    region = parsed.get("region") or req.region or "Aceh"
+    metric = parsed.get("metric")
+    intent = parsed["intent"]
+
+    # 1) fusion query dulu
+    fusion = _handle_fusion_query(
+        OceanAskRequest(
+            question=req.question,
+            region=region,
+            persona=req.persona,
+            mode=req.mode,
+            context=req.context,
+        )
+    )
     if fusion:
         return fusion
 
-    # 1) reference data
-    ref = _handle_reference_v2(req.question, req.region)
+    # 2) reference data pakai resolved region, bukan req.region mentah
+    ref = _handle_reference_v2(req.question, region)
     if ref:
         return ref
 
-    # 2) knowledge graph
+    # 3) jalur khusus FGI
+    if metric == "fgi" and any(k in (req.question or "").lower() for k in ["fgi", "fish ground index", "potensi ikan"]):
+        today = get_ocean_today(region=region, context=req.context)
+        fgi = get_fgi_today(region=region)
+        return _build_fgi_answer(
+            req=req,
+            region=region,
+            today=today,
+            fgi=fgi,
+        )
+
+    # 4) trend analysis HARUS keluar lebih awal
+    if intent == "trend_analysis":
+        return _build_trend_analysis_answer(
+            req=req,
+            region=region,
+            metric=metric,
+        )
+
+    # 5) knowledge graph
     if _looks_like_graph_query(req.question):
         graph_answer = graph_engine.answer(req.question)
         if graph_answer:
@@ -893,7 +1197,7 @@ def ask_ocean(req: OceanAskRequest = Body(...)):
                 "question": req.question,
                 "intent": "knowledge_graph_query",
                 "sub_intents": [],
-                "region": req.region or "Aceh",
+                "region": region,
                 "persona": req.persona,
                 "mode": req.mode,
                 "query_type": graph_answer.get("query_type", "knowledge_graph_query"),
@@ -925,7 +1229,7 @@ def ask_ocean(req: OceanAskRequest = Body(...)):
                 "results": [],
             }
 
-    # 3) regulation
+    # 6) regulation
     if _looks_like_regulation_query(req.question):
         reg_answer = engine.answer(req.question)
         sources = reg_answer.get("sources", [])
@@ -937,7 +1241,7 @@ def ask_ocean(req: OceanAskRequest = Body(...)):
             "question": req.question,
             "intent": "regulation_query",
             "sub_intents": [],
-            "region": req.region or "Aceh",
+            "region": region,
             "persona": req.persona,
             "mode": req.mode,
             "query_type": reg_answer.get("query_type"),
@@ -968,33 +1272,19 @@ def ask_ocean(req: OceanAskRequest = Body(...)):
             "results": reg_answer.get("results", []),
         }
 
-    # 4) ocean brain biasa
-    parsed = route_question(
-        question=req.question,
-        region=req.region,
-        persona=req.persona,
-    )
-
-    region = parsed.get("region") or req.region or "Aceh"
-    metric = parsed.get("metric")
-    intent = parsed["intent"]
-
+    # 7) ocean brain biasa
     trend_metric = _pick_trend_metric(intent, metric)
-
-    # selalu siapkan spatial dulu
     spatial = resolve_region_spatial(region)
 
-    # default fallback: region-based
     today = get_ocean_today(region=region, context=req.context)
 
-    # kalau ada bbox, boleh upgrade ke sampling area
     if spatial and spatial.get("bbox"):
         try:
             from app.services.spatial_sampling_service import sample_bbox_points
 
             points = sample_bbox_points(spatial["bbox"], n=3)
-
             samples = []
+
             for lat, lon in points:
                 s = get_ocean_today(lat=lat, lon=lon, context=req.context)
                 if s:
@@ -1020,7 +1310,6 @@ def ask_ocean(req: OceanAskRequest = Body(...)):
                     "sampling_points": len(samples),
                 }
         except Exception:
-            # kalau sampling gagal, tetap pakai fallback region-based
             pass
 
     fgi = get_fgi_today(region=region)
@@ -1053,19 +1342,19 @@ def ask_ocean(req: OceanAskRequest = Body(...)):
     if spatial:
         built["evidence"]["spatial"] = spatial
 
-    # Fusion v9: narrative berbasis data nyata
     narrative_today = {
         **today,
         "fgi_score": fgi.get("fgi_score") if isinstance(fgi, dict) else None,
         "trend": trend.get("trend") if isinstance(trend, dict) else None,
     }
 
-    built["answer"] = build_ocean_narrative(
-       region=region,
-       today=narrative_today,
-       spatial=spatial,
-       persona=req.persona,
-    )
+    if intent in {"ocean_condition_today", "safety_check", "fishing_recommendation"}:
+        built["answer"] = build_ocean_narrative(
+            region=region,
+            today=narrative_today,
+            spatial=spatial,
+            persona=req.persona,
+        )
 
     return OceanAskResponse(
         ok=True,
