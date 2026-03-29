@@ -27,8 +27,22 @@ class OceanAskResponse(BaseModel):
     region: Optional[str] = None
     persona: str
     mode: str
+
+    # routing / UI metadata
+    query_type: Optional[str] = None
+    topics: List[str] = Field(default_factory=list)
+
+    # main answer
     answer: OceanAnswerBlock
+
+    # evidence & scoring
     evidence: Dict[str, Any] = Field(default_factory=dict)
     scores: Dict[str, float] = Field(default_factory=dict)
     explanation: List[str] = Field(default_factory=list)
     data_status: Dict[str, Any] = Field(default_factory=dict)
+
+    # trust & UI support
+    trust: Dict[str, Any] = Field(default_factory=dict)
+    right_panel: Dict[str, Any] = Field(default_factory=dict)
+    sources: List[Dict[str, Any]] = Field(default_factory=list)
+    followups: List[str] = Field(default_factory=list)
