@@ -11,6 +11,7 @@ from app.services.ask_intents import (
     INTENT_SAFETY_CHECK,
     INTENT_TREND_ANALYSIS,
     INTENT_FGI_INDICATOR,
+    INTENT_RELATIVE_OPPORTUNITY,
     INTENT_FGI_COMPARE,
     INTENT_REFERENCE_DATA_QUERY,
     INTENT_KNOWLEDGE_ADAT,
@@ -1261,6 +1262,165 @@ def _handle_fgi_indicator(req: OceanAskRequest, ctx: Dict[str, Any]) -> OceanAsk
         ],
     )
 
+def _handle_relative_opportunity(req: OceanAskRequest, ctx: Dict[str, Any]) -> OceanAskResponse:
+    region = _resolve_effective_region(req, ctx)
+
+    today = get_ocean_today(region=region, context=req.context) or {}
+    fgi = get_fgi_today(region=region) or {}
+    metrics = _extract_ocean_metrics(today, fgi)
+
+    score = _safe_float(metrics.get("fgi_score"))
+    band = metrics.get("fgi_band") or "unknown"
+    sst = _safe_float(metrics.get("sst"))
+    chl = _safe_float(metrics.get("chl"))
+    wave = _safe_float(metrics.get("wave"))
+    wind = _safe_float(metrics.get("wind"))
+
+    drivers: List[str] = []
+
+    if score is not None:
+        drivers.append(
+            f"FGI env saat ini sekitar {score:.3f} dan berada pada band {band}."
+        )
+    else:
+        drivers.append(
+            "FGI env belum terbaca cukup kuat untuk memberi pembacaan peluang relatif yang lebih tegas."
+        )
+
+    if chl is not None:
+        if chl < 0.15:
+            drivers.append(
+                "Klorofil-a masih rendah, sehingga dukungan produktivitas permukaan belum kuat."
+            )
+        elif chl < 0.5:
+            drivers.append(
+                "Klorofil-a berada pada tingkat sedang, cukup mendukung tetapi belum terlalu kuat."
+            )
+        else:
+            drivers.append(
+                "Klorofil-a relatif tinggi, yang biasanya lebih mendukung produktivitas permukaan."
+            )
+
+    if sst is not None:
+        if sst >= 30.5:
+            drivers.append(
+                "Suhu permukaan laut cenderung hangat, sehingga interpretasi peluang perlu dibaca hati-hati bersama sinyal lain."
+            )
+        else:
+            drivers.append(
+                "Suhu permukaan laut masih berada pada kisaran yang relatif mendukung kondisi tropis."
+            )
+
+    if wave is not None and wind is not None:
+        drivers.append(
+            f"Gelombang {_label_wave(wave)} dan angin {_label_wind(wind)} memberi konteks tambahan untuk membaca peluang relatif dan kenyamanan operasi."
+        )
+
+    if score is None:
+        headline = f"Indikasi kelimpahan relatif ikan di {region} belum terbaca kuat."
+        summary = (
+            "NELAYA-AI belum mengukur kelimpahan ikan absolut secara langsung, "
+            "dan saat ini pembacaan peluang relatif untuk wilayah ini juga belum cukup kuat."
+        )
+        answer_kind = "generic"
+    else:
+        headline = f"Indikasi kelimpahan relatif ikan di {region} berhasil dibaca."
+        summary = (
+            "NELAYA-AI belum mengukur kelimpahan ikan absolut secara langsung, "
+            "tetapi dapat memberi pembacaan awal tentang indikasi kelimpahan relatif "
+            "berdasarkan FGI, suhu laut, klorofil-a, dan kondisi oseanografi lain. "
+            f"Untuk {region}, pembacaan peluang relatif saat ini berada pada level {band} "
+            f"dengan FGI env sekitar {score:.3f}."
+        )
+        answer_kind = "default"
+
+    evidence = {
+        "intent_match": True,
+        "data": {
+            "wave_m": metrics.get("wave"),
+            "wind_ms": metrics.get("wind"),
+            "sst_c": metrics.get("sst"),
+            "chl_mg_m3": metrics.get("chl"),
+            "sal_psu": metrics.get("sal"),
+            "ssh_cm": metrics.get("ssh"),
+            "fgi_score": metrics.get("fgi_score"),
+            "band": band,
+        },
+        "wave_m": metrics.get("wave"),
+        "wind_ms": metrics.get("wind"),
+        "sst_c": metrics.get("sst"),
+        "chl_mg_m3": metrics.get("chl"),
+        "sal_psu": metrics.get("sal"),
+        "ssh_cm": metrics.get("ssh"),
+        "fgi_score": metrics.get("fgi_score"),
+        "band": band,
+        "explain": {
+            "drivers": drivers,
+        },
+        "trust": {
+            "source": "FGI env + ocean snapshot",
+            "date_utc": today.get("date") or today.get("date_utc"),
+            "generated_at": today.get("generated_at") or today.get("meta", {}).get("generated_at"),
+            "freshness_status": _freshness_from_today(today),
+            "confidence": _confidence_from_today(today),
+            "basis_type": "relative_opportunity_proxy",
+            "mode": "relative-opportunity",
+            "caveat": "Ini adalah pembacaan indikasi kelimpahan relatif atau peluang awal penangkapan, bukan estimasi stok ikan absolut.",
+        },
+        "sources": [],
+        "missing_core_fields": score is None,
+    }
+
+    confidence = compute_confidence(
+        intent=INTENT_RELATIVE_OPPORTUNITY,
+        evidence=evidence,
+        answer_kind=answer_kind,
+    )
+
+    right_panel = _base_right_panel(
+        [
+            {"label": "FGI", "value": metrics.get("fgi_score"), "unit": ""},
+            {"label": "Band", "value": band, "unit": ""},
+            {"label": "Klorofil-a", "value": metrics.get("chl"), "unit": "mg/m³"},
+            {"label": "SST", "value": metrics.get("sst"), "unit": "°C"},
+            {"label": "Gelombang", "value": metrics.get("wave"), "unit": "m"},
+            {"label": "Angin", "value": metrics.get("wind"), "unit": "m/s"},
+        ],
+        evidence["trust"],
+        "Peluang relatif ikan",
+    )
+
+    return build_ocean_ask_response(
+        req=req,
+        intent=INTENT_RELATIVE_OPPORTUNITY,
+        sub_intents=[],
+        region=region,
+        query_type="ocean",
+        topics=ctx["topics"],
+        answer_block={
+            "headline": headline,
+            "summary": summary,
+            "recommendation": "Gunakan pembacaan ini sebagai indikasi awal, lalu padukan dengan pengamatan lapangan sebelum mengambil keputusan.",
+            "caution": "Ini bukan estimasi stok ikan absolut dan bukan jaminan hasil tangkapan.",
+        },
+        evidence=evidence,
+        confidence=confidence,
+        explanation=drivers,
+        data_status={
+            "date": today.get("date") or today.get("date_utc"),
+            "generated_at": today.get("generated_at") or today.get("meta", {}).get("generated_at"),
+            "stale": today.get("stale", True),
+            "completeness": today.get("completeness", "low"),
+            "source_type": "relative_opportunity",
+        },
+        right_panel=right_panel,
+        followups=[
+            "Mengapa FGI rendah?",
+            "Bagaimana kondisi laut hari ini?",
+            "Apakah ombak hari ini aman?",
+        ],
+    )
+
 
 def _handle_fgi_compare(req: OceanAskRequest, ctx: Dict[str, Any]) -> OceanAskResponse:
     region = ctx["region"]
@@ -1708,6 +1868,9 @@ def ask_ocean(req: OceanAskRequest = Body(...)) -> OceanAskResponse:
 
     if intent == INTENT_FGI_INDICATOR:
         return _handle_fgi_indicator(req, ctx)
+
+    if intent == INTENT_RELATIVE_OPPORTUNITY:
+        return _handle_relative_opportunity(req, ctx)
 
     if intent == INTENT_FGI_COMPARE:
         return _handle_fgi_compare(req, ctx)
