@@ -296,6 +296,165 @@ def _resolve_effective_region(req: OceanAskRequest, ctx: Dict[str, Any]) -> str:
             return canonical
 
     return ctx["region"]
+
+def _normalize_text(s: Any) -> str:
+    return str(s or "").strip().lower()
+
+
+def _looks_like_regulation_followup(req: OceanAskRequest) -> bool:
+    q = _normalize_text(req.question)
+
+    markers = [
+        "aturan ini",
+        "aturan tersebut",
+        "dokumen ini",
+        "dokumen tersebut",
+        "pasal ini",
+        "pasal itu",
+        "pasal tersebut",
+        "wilayah berlaku",
+        "berlaku di mana",
+        "cakupan aturan",
+        "ruang berlaku",
+        "siapa yang terkena",
+        "untuk wilayah mana",
+    ]
+    return any(m in q for m in markers)
+
+
+def _carry_intent_from_context(req: OceanAskRequest, detected_intent: str) -> str:
+    """
+    Jika pertanyaan sekarang berupa follow-up regulasi, dan pertanyaan sebelumnya
+    memang regulasi, maka jangan jatuh ke fallback.
+    """
+    ctx = req.context or {}
+    last_intent = _normalize_text(ctx.get("last_intent"))
+    last_query_type = _normalize_text(ctx.get("last_query_type"))
+    has_last_source = bool(ctx.get("last_primary_source"))
+
+    if detected_intent == INTENT_FALLBACK and _looks_like_regulation_followup(req):
+        if last_intent == INTENT_REGULATION_QUERY:
+            return INTENT_REGULATION_QUERY
+        if last_query_type == "knowledge" and has_last_source:
+            return INTENT_REGULATION_QUERY
+
+    return detected_intent
+
+
+def _detect_regulation_subintent(req: OceanAskRequest) -> str:
+    q = _normalize_text(req.question)
+
+    compliance_markers = [
+        "bolehkah",
+        "apakah boleh",
+        "dilarang",
+        "tidak boleh",
+        "bom",
+        "racun",
+        "potas",
+        "setrum",
+        "alat tangkap yang dilarang",
+        "jenis alat tangkap yang dilarang",
+        "illegal fishing",
+    ]
+    scope_markers = [
+        "wilayah berlaku",
+        "berlaku di mana",
+        "siapa yang terkena",
+        "untuk wilayah mana",
+        "cakupannya",
+        "ruang berlaku",
+        "cakupan aturan",
+    ]
+
+    if any(m in q for m in compliance_markers):
+        return "regulation_compliance"
+    if any(m in q for m in scope_markers):
+        return "regulation_scope"
+    return "regulation_explainer"
+
+
+def _compose_regulation_scope_answer(req: OceanAskRequest, reg_answer: Dict[str, Any], sources: List[Dict[str, Any]]) -> Dict[str, str]:
+    ctx = req.context or {}
+    last_region = ctx.get("last_region")
+    primary_source = ctx.get("last_primary_source") or (sources[0]["title"] if sources else None)
+    primary_pasal = ctx.get("last_primary_pasal") or (sources[0].get("pasal") if sources else None)
+
+    if primary_source:
+        summary = (
+            f"Pembacaan awal menunjukkan pertanyaan tentang wilayah berlaku harus dibaca dari cakupan dokumen utama, "
+            f"yaitu {primary_source}"
+        )
+        if primary_pasal:
+            summary += f" ({primary_pasal})"
+        summary += ". "
+    else:
+        summary = (
+            "Wilayah berlaku aturan ini belum bisa ditegaskan penuh hanya dari pertanyaan lanjutan, "
+            "tetapi tetap perlu dibaca dari ruang lingkup dokumen sumbernya. "
+        )
+
+    if last_region:
+        summary += f"Konteks percakapan sebelumnya terbaca terkait wilayah {last_region}. "
+
+    summary += (
+        "Untuk memastikan wilayah berlakunya, baca bagian ruang lingkup, objek yang diatur, "
+        "serta pasal yang relevan pada dokumen sumber."
+    )
+
+    return {
+        "headline": "Cakupan wilayah aturan berhasil dibaca.",
+        "summary": summary,
+        "recommendation": "Periksa dokumen utama dan pasal sumber untuk memastikan ruang berlaku aturan secara tepat.",
+        "caution": "Ini adalah pembacaan awal cakupan aturan, bukan penafsiran hukum final.",
+    }
+
+
+def _compose_regulation_compliance_answer(req: OceanAskRequest, reg_answer: Dict[str, Any], sources: List[Dict[str, Any]]) -> Dict[str, str]:
+    q = _normalize_text(req.question)
+    primary_source = sources[0]["title"] if sources else None
+    primary_pasal = sources[0].get("pasal") if sources else None
+
+    if "bom" in q:
+        verdict = "Tidak boleh."
+        summary = (
+            "Menangkap ikan dengan bom tidak boleh. Ini termasuk praktik destruktif yang merusak sumber daya ikan "
+            "dan harus dibaca dalam kerangka larangan penggunaan cara atau alat yang merusak."
+        )
+    elif "setrum" in q:
+        verdict = "Tidak boleh."
+        summary = (
+            "Menangkap ikan dengan setrum tidak boleh. Ini termasuk praktik yang merusak dan tidak dapat dibenarkan "
+            "sebagai cara penangkapan ikan yang aman dan berkelanjutan."
+        )
+    elif "racun" in q or "potas" in q:
+        verdict = "Tidak boleh."
+        summary = (
+            "Menangkap ikan dengan racun atau bahan berbahaya tidak boleh. Ini termasuk praktik yang merusak ekosistem "
+            "dan bertentangan dengan pengelolaan perikanan yang benar."
+        )
+    elif "alat tangkap yang dilarang" in q or "jenis alat tangkap yang dilarang" in q:
+        verdict = "Perlu dibaca sebagai daftar larangan dan pembatasan."
+        summary = (
+            "Jenis alat tangkap yang dilarang atau dibatasi harus dibaca dari dokumen sumber yang mengatur klasifikasi alat tangkap, "
+            "termasuk yang diperbolehkan, dibatasi, dan dilarang."
+        )
+    else:
+        verdict = "Perlu dibaca dari dasar regulasi."
+        summary = reg_answer.get("answer") or "Jawaban kepatuhan belum dapat ditegaskan penuh dari pembacaan awal."
+
+    if primary_source:
+        summary += f" Rujukan utamanya saat ini adalah {primary_source}"
+        if primary_pasal:
+            summary += f" ({primary_pasal})."
+
+    return {
+        "headline": f"{verdict} Jawaban regulasi ditemukan.",
+        "summary": summary,
+        "recommendation": "Periksa pasal sumber untuk memastikan konteks hukum yang tepat.",
+        "caution": "Untuk penggunaan formal, tetap baca dokumen asli dan konteks pasalnya.",
+    }
+
 # =========================================================
 # Handlers
 # =========================================================
@@ -1375,19 +1534,37 @@ def _handle_knowledge_adat(req: OceanAskRequest, ctx: Dict[str, Any]) -> OceanAs
 
 
 def _handle_regulation_query(req: OceanAskRequest, ctx: Dict[str, Any]) -> OceanAskResponse:
-    region = ctx["region"]
+    region = _resolve_effective_region(req, ctx)
 
     reg_answer = engine.answer(req.question) or {}
     sources = reg_answer.get("sources", []) or []
-    summary = reg_answer.get("answer") or "Belum ada jawaban regulasi yang cukup relevan."
+    subintent = _detect_regulation_subintent(req)
 
     primary_source = sources[0]["title"] if sources else None
     primary_pasal = sources[0].get("pasal") if sources else None
 
+    if subintent == "regulation_scope":
+        answer_block = _compose_regulation_scope_answer(req, reg_answer, sources)
+        answer_kind = "default" if sources else "generic"
+    elif subintent == "regulation_compliance":
+        answer_block = _compose_regulation_compliance_answer(req, reg_answer, sources)
+        answer_kind = "default" if sources else "generic"
+    else:
+        answer_block = {
+            "headline": "Jawaban regulasi ditemukan.",
+            "summary": reg_answer.get("answer") or "Belum ada jawaban regulasi yang cukup relevan.",
+            "recommendation": "Periksa pasal sumber untuk memastikan konteks hukum yang tepat.",
+            "caution": "Untuk penggunaan formal, tetap baca dokumen asli dan konteks pasalnya.",
+        }
+        answer_kind = "default" if sources else "generic"
+
     evidence = {
         "intent_match": True,
         "documents": sources,
-        "data": {"documents_count": len(sources)},
+        "data": {
+            "documents_count": len(sources),
+            "subintent": subintent,
+        },
         "trust": {
             "source": "Regulation Engine / Dokumen terindeks",
             "date_utc": None,
@@ -1405,22 +1582,17 @@ def _handle_regulation_query(req: OceanAskRequest, ctx: Dict[str, Any]) -> Ocean
     confidence = compute_confidence(
         intent=INTENT_REGULATION_QUERY,
         evidence=evidence,
-        answer_kind="default" if sources else "generic",
+        answer_kind=answer_kind,
     )
 
     return build_ocean_ask_response(
         req=req,
         intent=INTENT_REGULATION_QUERY,
-        sub_intents=[],
+        sub_intents=[subintent],
         region=region,
         query_type="knowledge",
         topics=ctx["topics"],
-        answer_block={
-            "headline": "Jawaban regulasi ditemukan.",
-            "summary": summary,
-            "recommendation": "Periksa pasal sumber untuk memastikan konteks hukum yang tepat.",
-            "caution": "Untuk penggunaan formal, tetap baca dokumen asli dan konteks pasalnya.",
-        },
+        answer_block=answer_block,
         evidence=evidence,
         confidence=confidence,
         explanation=[
@@ -1432,6 +1604,7 @@ def _handle_regulation_query(req: OceanAskRequest, ctx: Dict[str, Any]) -> Ocean
             "source_type": "regulations",
             "primary_source": primary_source,
             "primary_pasal": primary_pasal,
+            "subintent": subintent,
         },
         right_panel=_base_right_panel(
             [
@@ -1444,8 +1617,8 @@ def _handle_regulation_query(req: OceanAskRequest, ctx: Dict[str, Any]) -> Ocean
             "Dasar jawaban regulasi",
         ),
         followups=[
-            "Apa pasal yang paling relevan?",
             "Wilayah berlaku aturan ini di mana?",
+            "Apa pasal yang paling relevan?",
             "Apa kaitannya dengan nelayan kecil?",
         ],
     )
@@ -1518,7 +1691,8 @@ def _handle_fallback(req: OceanAskRequest, ctx: Dict[str, Any]) -> OceanAskRespo
 def ask_ocean(req: OceanAskRequest = Body(...)) -> OceanAskResponse:
     routing = classify_intent(req.question)
     ctx = build_context(req, routing)
-    intent = routing["intent"]
+    
+    intent = _carry_intent_from_context(req, routing["intent"])
 
     if intent == INTENT_OCEAN_CONDITION:
         return _handle_ocean_condition(req, ctx)

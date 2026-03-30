@@ -55,7 +55,8 @@ INTENT_KEYWORDS: Dict[str, List[str]] = {
         "jalur penangkapan", "zona penangkapan", "konservasi", "rzwp", "rzwp3k",
         "permen", "pp ", "uu ", "undang-undang", "sipr",
         "apa itu qanun", "apa itu rumpon", "aturan rumpon", "apa aturan rumpon",
-        "pasal tentang rumpon",
+        "pasal tentang rumpon", "wilayah berlaku", "berlaku di mana", "cakupan aturan",
+        "ruang berlaku", "siapa yang terkena", "untuk wilayah mana", 
     ],
     INTENT_KNOWLEDGE_ADAT: [
         "panglima laot", "panglima laot lhok", "adat laut",
