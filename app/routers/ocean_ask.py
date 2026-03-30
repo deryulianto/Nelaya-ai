@@ -268,6 +268,7 @@ def _resolve_effective_region(req: OceanAskRequest, ctx: Dict[str, Any]) -> str:
         ("aceh jaya", "Aceh Jaya"),
         ("aceh selatan", "Aceh Selatan"),
         ("aceh singkil", "Aceh Singkil"),
+        ("singkil", "Singkil"),
         ("aceh tamiang", "Aceh Tamiang"),
         ("aceh tengah", "Aceh Tengah"),
         ("aceh tenggara", "Aceh Tenggara"),
@@ -431,52 +432,154 @@ def _handle_metric_explainer(req: OceanAskRequest, ctx: Dict[str, Any]) -> Ocean
     drivers: List[str] = []
     headline = "Penjelasan metrik berhasil dibaca."
     summary = "Ringkasan metrik belum cukup spesifik."
+    answer_kind = "generic"
 
-    if metric == "chl":
-        chl = _safe_float(metrics["chl"])
-        headline = "Klorofil-a berhasil dijelaskan."
-        if chl is None:
-            summary = f"Nilai klorofil-a untuk {region} belum terbaca cukup kuat."
-        elif chl < 0.15:
-            summary = (
-                f"Klorofil-a di {region} saat ini tergolong rendah. Ini biasanya menandakan dukungan produktivitas permukaan belum kuat."
-            )
-            drivers = [
-                "Klorofil-a rendah berarti pakan alami permukaan belum menonjol.",
-                "Ini adalah pembacaan permukaan, bukan keseluruhan kondisi rantai makanan laut.",
-            ]
-        elif chl < 0.5:
-            summary = (
-                f"Klorofil-a di {region} berada pada tingkat sedang. Artinya produktivitas permukaan ada, tetapi belum terlalu kuat."
-            )
-            drivers = [
-                "Klorofil-a sedang menunjukkan produktivitas permukaan cukup ada.",
-                "Pembacaan ini perlu dipadukan dengan suhu, angin, dan kondisi lapangan.",
-            ]
-        else:
-            summary = (
-                f"Klorofil-a di {region} relatif tinggi, yang berarti dukungan produktivitas permukaan cenderung lebih baik."
-            )
-            drivers = [
-                "Klorofil-a tinggi biasanya mendukung produktivitas permukaan yang lebih baik.",
-                "Namun ini tetap bukan jaminan hasil tangkapan di setiap titik.",
-            ]
-    elif metric == "sst":
+    # =========================
+    # SST / suhu laut
+    # =========================
+    if metric == "sst":
         sst = _safe_float(metrics["sst"])
-        headline = "SST berhasil dijelaskan."
-        if sst is None:
-            summary = f"Suhu permukaan laut untuk {region} belum terbaca cukup kuat."
+        ask_value = ("berapa" in q) or ("rata-rata" in q) or ("rata rata" in q)
+        ask_reason = ("mengapa" in q) or ("kenapa" in q)
+
+        if ask_value:
+            headline = f"Suhu laut {region} berhasil dibaca."
+            if sst is None:
+                summary = f"Suhu permukaan laut rata-rata pembacaan wilayah {region} belum terbaca cukup kuat."
+                answer_kind = "generic"
+            else:
+                summary = (
+                    f"Suhu permukaan laut rata-rata pembacaan wilayah {region} saat ini sekitar {sst:.2f} °C."
+                )
+                answer_kind = "default"
+
+            drivers = [
+                "Nilai ini adalah pembacaan rata-rata wilayah pada snapshot data yang tersedia.",
+                "SST membantu membaca kondisi termal permukaan laut.",
+                "Interpretasinya paling baik jika dipadukan dengan klorofil-a, angin, dan gelombang.",
+            ]
+
+        elif ask_reason:
+            headline = f"Suhu laut {region} berhasil dijelaskan."
+            if sst is None:
+                summary = f"Suhu permukaan laut untuk {region} belum terbaca cukup kuat."
+                answer_kind = "generic"
+            else:
+                summary = (
+                    f"Suhu permukaan laut {region} saat ini sekitar {sst:.2f} °C. "
+                    f"Nilai ini menunjukkan kondisi termal permukaan laut yang perlu dibaca bersama dinamika musim, angin, dan pencampuran massa air."
+                )
+                answer_kind = "default"
+
+            drivers = [
+                "SST dipengaruhi oleh pemanasan matahari, dinamika musim, dan pencampuran massa air.",
+                "Pada wilayah tropis seperti Aceh, suhu permukaan laut cenderung hangat sepanjang tahun.",
+                "Pembacaan ini adalah kondisi permukaan, bukan seluruh kolom air.",
+            ]
         else:
-            summary = (
-                f"SST adalah suhu permukaan laut. Di {region}, nilainya saat ini sekitar {sst:.2f} °C dan membantu membaca dinamika massa air serta kenyamanan habitat."
-            )
+            headline = "SST berhasil dijelaskan."
+            if sst is None:
+                summary = f"Suhu permukaan laut untuk {region} belum terbaca cukup kuat."
+                answer_kind = "generic"
+            else:
+                summary = (
+                    f"SST adalah suhu permukaan laut. Di {region}, nilainya saat ini sekitar {sst:.2f} °C dan membantu membaca dinamika massa air serta kenyamanan habitat."
+                )
+                answer_kind = "default"
+
             drivers = [
                 "SST membantu membaca kondisi termal permukaan laut.",
                 "Interpretasinya perlu dipadukan dengan klorofil-a dan dinamika angin/gelombang.",
             ]
+
+    # =========================
+    # Klorofil-a
+    # =========================
+    elif metric == "chl":
+        chl = _safe_float(metrics["chl"])
+        ask_value = ("berapa" in q) or ("rata-rata" in q) or ("rata rata" in q)
+        ask_reason = ("mengapa" in q) or ("kenapa" in q)
+
+        if ask_value:
+            headline = f"Klorofil-a {region} berhasil dibaca."
+            if chl is None:
+                summary = f"Nilai klorofil-a untuk {region} belum terbaca cukup kuat."
+                answer_kind = "generic"
+            else:
+                summary = (
+                    f"Klorofil-a rata-rata pembacaan wilayah {region} saat ini sekitar {chl:.3f} mg/m³."
+                )
+                answer_kind = "default"
+
+            drivers = [
+                "Nilai ini membantu membaca produktivitas perairan permukaan.",
+                "Interpretasi terbaik didapat bila dibaca bersama suhu laut dan angin.",
+            ]
+
+        elif ask_reason:
+            headline = f"Klorofil-a {region} berhasil dijelaskan."
+            if chl is None:
+                summary = f"Nilai klorofil-a untuk {region} belum terbaca cukup kuat."
+                answer_kind = "generic"
+            elif chl < 0.15:
+                summary = (
+                    f"Klorofil-a di {region} saat ini tergolong rendah. Ini biasanya menandakan dukungan produktivitas permukaan belum kuat."
+                )
+                answer_kind = "default"
+            elif chl < 0.5:
+                summary = (
+                    f"Klorofil-a di {region} berada pada tingkat sedang. Artinya produktivitas permukaan ada, tetapi belum terlalu kuat."
+                )
+                answer_kind = "default"
+            else:
+                summary = (
+                    f"Klorofil-a di {region} relatif tinggi, yang berarti dukungan produktivitas permukaan cenderung lebih baik."
+                )
+                answer_kind = "default"
+
+            drivers = [
+                "Klorofil-a adalah indikator produktivitas permukaan perairan.",
+                "Ini adalah pembacaan permukaan, bukan keseluruhan kondisi rantai makanan laut.",
+            ]
+        else:
+            headline = "Klorofil-a berhasil dijelaskan."
+            if chl is None:
+                summary = f"Nilai klorofil-a untuk {region} belum terbaca cukup kuat."
+                answer_kind = "generic"
+            else:
+                summary = (
+                    f"Klorofil-a membantu membaca produktivitas permukaan. Di {region}, nilainya saat ini sekitar {chl:.3f} mg/m³."
+                )
+                answer_kind = "default"
+
+            drivers = [
+                "Klorofil-a rendah berarti pakan alami permukaan belum menonjol.",
+                "Klorofil-a sedang hingga tinggi menunjukkan produktivitas permukaan lebih aktif.",
+            ]
+
+    # =========================
+    # SSH
+    # =========================
+    elif metric == "ssh":
+        ssh = _safe_float(metrics["ssh"])
+        headline = "SSH berhasil dijelaskan."
+        if ssh is None:
+            summary = f"Data muka laut permukaan untuk {region} belum terbaca cukup kuat."
+            answer_kind = "generic"
+        else:
+            summary = (
+                f"SSH adalah tinggi muka laut permukaan. Di {region}, pembacaan saat ini sekitar {ssh:.2f} cm dan dipakai sebagai sinyal tambahan untuk membaca dinamika regional."
+            )
+            answer_kind = "default"
+
+        drivers = [
+            "SSH membantu membaca variasi muka laut permukaan regional.",
+            "Interpretasinya tidak berdiri sendiri dan perlu dibaca bersama sinyal laut lainnya.",
+        ]
+
     else:
         summary = "Pertanyaan metrik ini belum didukung penuh pada tahap MVP."
-        drivers = ["Coba tanyakan metrik yang lebih spesifik seperti klorofil-a, SST, atau SSH."]
+        drivers = ["Coba tanyakan metrik yang lebih spesifik seperti suhu laut, klorofil-a, atau SSH."]
 
     evidence = {
         "intent_match": True,
@@ -485,12 +588,14 @@ def _handle_metric_explainer(req: OceanAskRequest, ctx: Dict[str, Any]) -> Ocean
             "wind_ms": metrics["wind"],
             "sst_c": metrics["sst"],
             "chl_mg_m3": metrics["chl"],
+            "ssh_cm": metrics["ssh"],
             "fgi_score": metrics["fgi_score"],
         },
         "wave_m": metrics["wave"],
         "wind_ms": metrics["wind"],
         "sst_c": metrics["sst"],
         "chl_mg_m3": metrics["chl"],
+        "ssh_cm": metrics["ssh"],
         "fgi_score": metrics["fgi_score"],
         "explain": {"drivers": drivers},
         "trust": _build_ocean_trust(
@@ -507,15 +612,16 @@ def _handle_metric_explainer(req: OceanAskRequest, ctx: Dict[str, Any]) -> Ocean
     confidence = compute_confidence(
         intent=INTENT_METRIC_EXPLAINER,
         evidence=evidence,
-        answer_kind="default" if metric in {"chl", "sst"} else "generic",
+        answer_kind=answer_kind,
     )
 
     right_panel = _base_right_panel(
         [
             {"label": "SST", "value": metrics["sst"], "unit": "°C"},
             {"label": "Klorofil-a", "value": metrics["chl"], "unit": "mg/m³"},
-            {"label": "Angin", "value": metrics["wind"], "unit": "m/s"},
             {"label": "Gelombang", "value": metrics["wave"], "unit": "m"},
+            {"label": "Angin", "value": metrics["wind"], "unit": "m/s"},
+            {"label": "FGI", "value": metrics["fgi_score"], "unit": ""},
         ],
         evidence["trust"],
         "Penjelasan metrik",
@@ -546,9 +652,9 @@ def _handle_metric_explainer(req: OceanAskRequest, ctx: Dict[str, Any]) -> Ocean
         },
         right_panel=right_panel,
         followups=[
-            "Laut Aceh hari ini bagaimana?",
-            "Apa yang paling berubah hari ini?",
+            "Bagaimana kondisi laut hari ini?",
             "Mengapa FGI rendah?",
+            "Bagaimana ketinggian gelombang hari ini?",
         ],
     )
 
