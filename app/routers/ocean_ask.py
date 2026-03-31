@@ -16,6 +16,7 @@ from app.services.ask_intents import (
     INTENT_REFERENCE_DATA_QUERY,
     INTENT_KNOWLEDGE_ADAT,
     INTENT_REGULATION_QUERY,
+    INTENT_OFF_DOMAIN_FEEDBACK,
     INTENT_FALLBACK,
 )
 from app.services.ask_intent_router import classify_intent
@@ -1154,6 +1155,16 @@ def _handle_fgi_indicator(req: OceanAskRequest, ctx: Dict[str, Any]) -> OceanAsk
     drivers = _fgi_drivers(metrics)
 
     if "apa arti" in q or "apa itu" in q:
+            is_definition = ("apa arti" in q) or ("apa itu" in q)
+    is_general_summary = (
+        ("informasi fgi" in q)
+        or ("gambaran fgi" in q)
+        or ("ringkasan fgi" in q)
+        or ("secara umum" in q and "fgi" in q)
+        or ("kondisi fgi" in q)
+    )
+
+    if is_definition:
         headline = f"FGI env {region} berhasil dijelaskan."
         if score is None:
             summary = "FGI env adalah indikator peluang relatif area penangkapan ikan, tetapi nilainya belum terbaca cukup kuat pada pembacaan ini."
@@ -1164,6 +1175,23 @@ def _handle_fgi_indicator(req: OceanAskRequest, ctx: Dict[str, Any]) -> OceanAsk
                 f"Untuk {region}, nilainya saat ini sekitar {score:.3f} dan berada pada band {band}."
             )
             answer_kind = "default"
+
+    elif is_general_summary:
+        headline = f"Ringkasan FGI {region} hari ini berhasil dibaca."
+        if score is None:
+            summary = (
+                f"FGI env hari ini untuk {region} belum terbaca cukup kuat, "
+                "sehingga ringkasan peluang relatif belum bisa ditegaskan."
+            )
+            answer_kind = "generic"
+        else:
+            summary = (
+                f"FGI env hari ini memberi pembacaan awal tentang peluang relatif penangkapan ikan di {region}. "
+                f"Nilainya saat ini sekitar {score:.3f} dan berada pada band {band}. "
+                "Ini bukan jaminan hasil tangkapan, tetapi indikasi awal yang sebaiknya dibaca bersama suhu laut, klorofil-a, dan kondisi operasi."
+            )
+            answer_kind = "default"
+
     else:
         headline = f"FGI env {region} berhasil dibaca."
         if score is None:
@@ -1175,6 +1203,7 @@ def _handle_fgi_indicator(req: OceanAskRequest, ctx: Dict[str, Any]) -> OceanAsk
                 f"Ini adalah pembacaan peluang relatif, bukan jaminan hasil tangkapan."
             )
             answer_kind = "default"
+        
 
     evidence = {
         "intent_match": True,
@@ -1783,6 +1812,72 @@ def _handle_regulation_query(req: OceanAskRequest, ctx: Dict[str, Any]) -> Ocean
         ],
     )
 
+def _handle_off_domain_feedback(req: OceanAskRequest, ctx: Dict[str, Any]) -> OceanAskResponse:
+    region = _resolve_effective_region(req, ctx)
+
+    evidence = {
+        "intent_match": True,
+        "is_feedback": True,
+        "trust": {
+            "source": "Tanya NELAYA-AI conversational fallback",
+            "date_utc": None,
+            "generated_at": None,
+            "freshness_status": "unknown",
+            "confidence": "medium",
+            "basis_type": "feedback_response",
+            "mode": "conversation",
+            "caveat": "Ini bukan jawaban domain laut, melainkan respons percakapan ringan.",
+        },
+        "sources": [],
+    }
+
+    confidence = compute_confidence(
+        intent=INTENT_OFF_DOMAIN_FEEDBACK,
+        evidence=evidence,
+        answer_kind="default",
+    )
+
+    return build_ocean_ask_response(
+        req=req,
+        intent=INTENT_OFF_DOMAIN_FEEDBACK,
+        sub_intents=[],
+        region=region,
+        query_type="conversation",
+        topics=ctx["topics"],
+        answer_block={
+            "headline": "Terima kasih, saya memang masih terus belajar.",
+            "summary": (
+                "Kalau ada jawaban saya yang belum pas, itu masukan yang baik. "
+                "Coba beri saya pertanyaan yang lebih spesifik tentang kondisi laut, FGI, gelombang, "
+                "regulasi, atau data referensi, dan saya akan mencoba menjawab lebih baik."
+            ),
+            "recommendation": "Arahkan saya ke pertanyaan yang lebih spesifik agar pembacaan saya lebih tepat.",
+            "caution": "Saya masih dalam tahap penguatan dan terus diperbaiki dari waktu ke waktu.",
+        },
+        evidence=evidence,
+        confidence=confidence,
+        explanation=[
+            "Respons ini ditujukan untuk umpan balik ringan, bukan pertanyaan domain laut.",
+        ],
+        data_status={
+            "source_type": "conversation_feedback",
+        },
+        right_panel=_base_right_panel(
+            [
+                {"label": "Jenis query", "value": "Feedback", "unit": ""},
+                {"label": "Mode", "value": "Percakapan", "unit": ""},
+            ],
+            evidence["trust"],
+            "Respons percakapan",
+        ),
+        followups=[
+            "Bagaimana kondisi laut hari ini?",
+            "Apa itu FGI?",
+            "Apakah ombak hari ini aman?",
+            "Apa itu rumpon?",
+        ],
+    )
+
 
 def _handle_fallback(req: OceanAskRequest, ctx: Dict[str, Any]) -> OceanAskResponse:
     region = ctx["region"]
@@ -1883,6 +1978,9 @@ def ask_ocean(req: OceanAskRequest = Body(...)) -> OceanAskResponse:
 
     if intent == INTENT_REGULATION_QUERY:
         return _handle_regulation_query(req, ctx)
+
+    if intent == INTENT_OFF_DOMAIN_FEEDBACK:
+        return _handle_off_domain_feedback(req, ctx)
 
     return _handle_fallback(req, ctx)
 

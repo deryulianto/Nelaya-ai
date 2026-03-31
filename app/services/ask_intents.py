@@ -15,6 +15,7 @@ INTENT_KNOWLEDGE_ADAT = "knowledge_adat"
 INTENT_REGULATION_QUERY = "regulation_query"
 INTENT_REFERENCE_DATA_QUERY = "reference_data_query"
 INTENT_FALLBACK = "fallback"
+INTENT_OFF_DOMAIN_FEEDBACK = "off_domain_feedback"
 
 ALL_INTENTS: List[str] = [
     INTENT_OCEAN_CONDITION,
@@ -138,10 +139,28 @@ INTENT_KEYWORDS: Dict[str, List[str]] = {
         "history", "naik turun", "dibanding kemarin", "dibanding minggu lalu",
     ],
     INTENT_FGI_INDICATOR: [
-        "fgi rendah", "arti fgi", "mengapa fgi", "skor fgi", "fgi hari ini",
-        "fish ground index", "apa itu fgi", "apa arti fgi",
-        "mengapa peluang ikan rendah",
-    ],
+    "fgi rendah",
+    "arti fgi",
+    "mengapa fgi",
+    "skor fgi",
+    "fgi hari ini",
+    "fish ground index",
+    "apa itu fgi",
+    "apa arti fgi",
+    "mengapa peluang ikan rendah",
+    "informasi fgi",
+    "informasi fgi hari ini",
+    "gambaran fgi",
+    "gambaran fgi hari ini",
+    "ringkasan fgi",
+    "ringkasan fgi hari ini",
+    "fgi secara umum",
+    "fgi secara umum hari ini",
+    "bagaimana informasi fgi",
+    "bagaimana informasi fgi secara umum",
+    "bagaimana informasi fgi secara umum hari ini",
+    "kondisi fgi hari ini",
+],
     INTENT_METRIC_EXPLAINER: [
     "apa itu sst",
     "apa arti sst",
@@ -177,6 +196,17 @@ INTENT_KEYWORDS: Dict[str, List[str]] = {
         "ketinggian ombak hari ini", "tinggi ombak hari ini",
         "kondisi gelombang hari ini", "kondisi ombak hari ini",
     ],
+
+    INTENT_OFF_DOMAIN_FEEDBACK: [
+        "kamu harus belajar lagi",
+        "kamu belum pintar",
+        "jawabanmu kurang tepat",
+        "jawabanmu salah",
+        "kamu salah",
+        "belajar lagi ya",
+        "kamu masih lemah",
+        "kamu kurang paham",
+   ],
 }
 
 METRIC_KEYWORDS = {
