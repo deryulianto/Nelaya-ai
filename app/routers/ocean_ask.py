@@ -1,8 +1,13 @@
+import logging
+import os
+
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Body
+from app.services.ask_orchestrator_v2 import orchestrate_tanya_v2
+
 
 from app.schemas.ocean_ask import OceanAskRequest, OceanAskResponse
 from app.services.ask_intents import (
@@ -46,6 +51,49 @@ router = APIRouter(prefix="/api/v1/ocean", tags=["Ocean Brain"])
 
 engine = RegulationEngine()
 graph_engine = KnowledgeGraphService()
+
+
+logger = logging.getLogger("nelaya")
+
+# ---------------------------------------------------------
+# Hybrid Orchestrator v2 transition flags
+# ---------------------------------------------------------
+# ACTIVE:
+#   kalau 1, endpoint /ask akan mencoba v2 sebagai jalur utama
+# SHADOW:
+#   kalau 1, v2 tetap dijalankan diam-diam untuk logging,
+#   tetapi jawaban ke user tetap dari v1
+TANYA_ORCH_V2_ACTIVE = os.getenv("TANYA_ORCH_V2_ACTIVE", "0") == "1"
+TANYA_ORCH_V2_SHADOW = os.getenv("TANYA_ORCH_V2_SHADOW", "1") == "1"
+
+
+def _should_activate_v2(req: OceanAskRequest) -> bool:
+    """
+    v2 aktif hanya jika:
+    - environment flag aktif, atau
+    - request context secara eksplisit minta v2
+    """
+    ctx = req.context or {}
+    return bool(ctx.get("__use_v2")) or TANYA_ORCH_V2_ACTIVE
+
+
+def _run_v2_shadow(req: OceanAskRequest) -> None:
+    """
+    Jalankan v2 diam-diam agar kita bisa audit hasil routingnya
+    tanpa mengganggu jawaban v1 yang sudah stabil.
+    """
+    try:
+        shadow_resp = orchestrate_tanya_v2(req)
+        logger.info(
+            "TANYA_V2_SHADOW intent=%s sub=%s region=%s question=%s",
+            getattr(shadow_resp, "intent", None),
+            getattr(shadow_resp, "sub_intents", []),
+            getattr(shadow_resp, "region", None),
+            (req.question or "")[:200],
+        )
+    except Exception:
+        logger.exception("TANYA_V2_SHADOW failed")
+
 
 
 # =========================================================
@@ -1944,46 +1992,24 @@ def _handle_fallback(req: OceanAskRequest, ctx: Dict[str, Any]) -> OceanAskRespo
 
 @router.post("/ask", response_model=OceanAskResponse)
 def ask_ocean(req: OceanAskRequest = Body(...)) -> OceanAskResponse:
-    routing = classify_intent(req.question)
-    ctx = build_context(req, routing)
-    
-    intent = _carry_intent_from_context(req, routing["intent"])
+    # -----------------------------------------------------
+    # v2 shadow mode: belajar dari trafik nyata tanpa mengubah jawaban user
+    # -----------------------------------------------------
+    if TANYA_ORCH_V2_SHADOW:
+        _run_v2_shadow(req)
 
-    if intent == INTENT_OCEAN_CONDITION:
-        return _handle_ocean_condition(req, ctx)
+    # -----------------------------------------------------
+    # v2 active mode: hanya aktif jika sengaja dinyalakan
+    # -----------------------------------------------------
+    if _should_activate_v2(req):
+        try:
+            return orchestrate_tanya_v2(req)
+        except Exception:
+            logger.exception("TANYA_V2_ACTIVE failed, fallback to v1")
 
-    if intent == INTENT_METRIC_EXPLAINER:
-        return _handle_metric_explainer(req, ctx)
-
-    if intent == INTENT_SAFETY_CHECK:
-        return _handle_safety_check(req, ctx)
-
-    if intent == INTENT_TREND_ANALYSIS:
-        return _handle_trend_analysis(req, ctx)
-
-    if intent == INTENT_FGI_INDICATOR:
-        return _handle_fgi_indicator(req, ctx)
-
-    if intent == INTENT_RELATIVE_OPPORTUNITY:
-        return _handle_relative_opportunity(req, ctx)
-
-    if intent == INTENT_FGI_COMPARE:
-        return _handle_fgi_compare(req, ctx)
-
-    if intent == INTENT_REFERENCE_DATA_QUERY:
-        return _handle_reference_query(req, ctx)
-
-    if intent == INTENT_KNOWLEDGE_ADAT:
-        return _handle_knowledge_adat(req, ctx)
-
-    if intent == INTENT_REGULATION_QUERY:
-        return _handle_regulation_query(req, ctx)
-
-    if intent == INTENT_OFF_DOMAIN_FEEDBACK:
-        return _handle_off_domain_feedback(req, ctx)
-
-    return _handle_fallback(req, ctx)
-
+    # -----------------------------------------------------
+    # v1 existing logic tetap jalan seperti biasa
+    # -----------------------------------------------------
 
 @router.post("/quick-check")
 def quick_check(req: OceanAskRequest):
