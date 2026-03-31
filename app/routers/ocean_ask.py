@@ -1,7 +1,8 @@
+from __future__ import annotations
 import logging
 import os
 
-from __future__ import annotations
+
 
 from typing import Any, Dict, List, Optional
 
@@ -1992,24 +1993,45 @@ def _handle_fallback(req: OceanAskRequest, ctx: Dict[str, Any]) -> OceanAskRespo
 
 @router.post("/ask", response_model=OceanAskResponse)
 def ask_ocean(req: OceanAskRequest = Body(...)) -> OceanAskResponse:
-    # -----------------------------------------------------
-    # v2 shadow mode: belajar dari trafik nyata tanpa mengubah jawaban user
-    # -----------------------------------------------------
-    if TANYA_ORCH_V2_SHADOW:
-        _run_v2_shadow(req)
+    routing = classify_intent(req.question)
+    ctx = build_context(req, routing)
+    intent = _carry_intent_from_context(req, routing["intent"])
 
-    # -----------------------------------------------------
-    # v2 active mode: hanya aktif jika sengaja dinyalakan
-    # -----------------------------------------------------
-    if _should_activate_v2(req):
-        try:
-            return orchestrate_tanya_v2(req)
-        except Exception:
-            logger.exception("TANYA_V2_ACTIVE failed, fallback to v1")
+    if intent == INTENT_OCEAN_CONDITION:
+        return _handle_ocean_condition(req, ctx)
 
-    # -----------------------------------------------------
-    # v1 existing logic tetap jalan seperti biasa
-    # -----------------------------------------------------
+    if intent == INTENT_METRIC_EXPLAINER:
+        return _handle_metric_explainer(req, ctx)
+
+    if intent == INTENT_SAFETY_CHECK:
+        return _handle_safety_check(req, ctx)
+
+    if intent == INTENT_TREND_ANALYSIS:
+        return _handle_trend_analysis(req, ctx)
+
+    if intent == INTENT_FGI_INDICATOR:
+        return _handle_fgi_indicator(req, ctx)
+
+    if intent == INTENT_RELATIVE_OPPORTUNITY:
+        return _handle_relative_opportunity(req, ctx)
+
+    if intent == INTENT_FGI_COMPARE:
+        return _handle_fgi_compare(req, ctx)
+
+    if intent == INTENT_REFERENCE_DATA_QUERY:
+        return _handle_reference_query(req, ctx)
+
+    if intent == INTENT_KNOWLEDGE_ADAT:
+        return _handle_knowledge_adat(req, ctx)
+
+    if intent == INTENT_REGULATION_QUERY:
+        return _handle_regulation_query(req, ctx)
+
+    if intent == INTENT_OFF_DOMAIN_FEEDBACK:
+        return _handle_off_domain_feedback(req, ctx)
+
+    return _handle_fallback(req, ctx)
+
 
 @router.post("/quick-check")
 def quick_check(req: OceanAskRequest):
