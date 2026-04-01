@@ -111,6 +111,27 @@ def load_da(ds: xr.Dataset, var: str) -> xr.DataArray:
     return da
 
 
+def load_first_valid_da(ds: xr.Dataset, var: str) -> xr.DataArray:
+    da = ds[var]
+
+    tdim = pick_time_dim(da)
+    if tdim:
+        n = int(da.sizes.get(tdim, 0))
+        for i in range(n):
+            cand = da.isel({tdim: i})
+            ddim = pick_depth_dim(cand)
+            if ddim:
+                cand = cand.isel({ddim: 0})
+            try:
+                vals = np.asarray(cand.values, dtype="float64")
+                if np.isfinite(vals).any():
+                    return cand
+            except Exception:
+                pass
+
+    return load_da(ds, var)
+
+
 def subset_bbox(da: xr.DataArray, latn: str, lonn: str) -> xr.DataArray:
     # kalau lat/lon 1D, aman pakai slice
     try:
@@ -241,6 +262,55 @@ def point_or_mean_multi(
     return None
 
 
+def build_wind_speed(
+    ds: xr.Dataset,
+) -> tuple[float | None, xr.DataArray | None, tuple[str, str] | None]:
+    lat, lon = guess_lat_lon_names(ds)
+
+    # 1) coba direct speed variable dulu
+    direct_speed_vars = [
+        "wind_speed",
+        "windspeed",
+        "si10",
+        "ws",
+        "windspeed_10m",
+        "wind_speed_10m",
+    ]
+
+    for vname in direct_speed_vars:
+        if vname in ds.data_vars:
+            da = subset_bbox(load_first_valid_da(ds, vname), lat, lon).load()
+            val = scalar_mean(da)
+            if val is None:
+                val = _mean_finite_values(da.values)
+            if val is not None:
+                return val, da, (lat, lon)
+
+    # 2) coba pasangan komponen u/v
+    pairs = [
+        ("eastward_wind", "northward_wind"),
+        ("u10", "v10"),
+        ("uwnd", "vwnd"),
+        ("u", "v"),
+    ]
+
+    for a, b in pairs:
+        if a in ds.data_vars and b in ds.data_vars:
+            u = load_first_valid_da(ds, a)
+            v = load_first_valid_da(ds, b)
+            speed = np.hypot(u, v)
+            speed = subset_bbox(speed, lat, lon).load()
+
+            val = scalar_mean(speed)
+            if val is None:
+                val = _mean_finite_values(speed.values)
+
+            if val is not None:
+                return val, speed, (lat, lon)
+
+    return None, None, None
+
+
 def compute_metrics(base_day: date, max_back: int = 10) -> dict:
     out: dict = {
         "ok": True,
@@ -349,40 +419,37 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
             ds.close()
     add_metric("wave", "m", wave_val, "wave_anfc", pday, p)
 
-    # -------- WIND (u,v -> speed) --------
-    p, pday = find_latest_local("wind_nrt", base_day, max_back=max_back)
-    out["inputs"]["wind_nrt"] = {"path": None if p is None else p.as_posix(), "day": pday}
+            # -------- WIND (speed / u,v -> speed, with valid-file fallback) --------
     wind_val = None
     wind_da_for_points: xr.DataArray | None = None
     wind_latlon: tuple[str, str] | None = None
+    p = None
+    pday = None
 
-    if p:
-        ds = xr.open_dataset(p)
+    # jangan langsung percaya file terbaru; cari file terbaru yang benar-benar
+    # menghasilkan nilai angin finite
+    for i in range(max_back + 1):
+        cand_day = base_day - timedelta(days=i)
+        cand_p = default_out_path("wind_nrt", cand_day)
+
+        if not is_ok_file(cand_p):
+            continue
+
+        ds = xr.open_dataset(cand_p)
         try:
-            lat, lon = guess_lat_lon_names(ds)
-            pairs = [
-                ("eastward_wind", "northward_wind"),
-                ("u10", "v10"),
-                ("uwnd", "vwnd"),
-                ("u", "v"),
-            ]
-            u = v = None
-            for a, b in pairs:
-                if a in ds.data_vars and b in ds.data_vars:
-                    u = load_da(ds, a)
-                    v = load_da(ds, b)
-                    break
-
-            if u is not None and v is not None:
-                speed = np.sqrt(u**2 + v**2)
-                speed = subset_bbox(speed, lat, lon)
-                speed = speed.load()  # biar aman setelah ds.close()
-                wind_val = scalar_mean(speed)
-                wind_da_for_points = speed
-                wind_latlon = (lat, lon)
+            cand_val, cand_da, cand_latlon = build_wind_speed(ds)
         finally:
             ds.close()
 
+        if cand_val is not None:
+            p = cand_p
+            pday = ymd(cand_day)
+            wind_val = cand_val
+            wind_da_for_points = cand_da
+            wind_latlon = cand_latlon
+            break
+
+    out["inputs"]["wind_nrt"] = {"path": None if p is None else p.as_posix(), "day": pday}
     add_metric("wind", "m/s", wind_val, "wind_nrt", pday, p)
 
     # ---------- Quick compare points ----------

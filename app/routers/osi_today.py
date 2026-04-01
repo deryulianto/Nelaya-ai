@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import os
 from datetime import datetime, timezone
 from typing import Any
@@ -61,22 +62,63 @@ def _confidence(required_ok: bool, completeness_ratio: float, freshness_status: 
     return "low"
 
 
-def _pick_metric(metrics: dict, key: str, alt: str | None = None):
-    if metrics.get(key) is not None:
-        return metrics.get(key)
-    if alt and metrics.get(alt) is not None:
-        return metrics.get(alt)
-
-    v = metrics.get(key)
-    if v is None and alt:
-        v = metrics.get(alt)
-
+def _unwrap_metric(v: Any):
     if isinstance(v, dict):
-        return v.get("value")
+        for key in ("value", "v", "raw", "mean", "avg", "latest"):
+            if key in v and v.get(key) is not None:
+                return v.get(key)
+
+        for nested_key in ("data", "current", "metric"):
+            inner = v.get(nested_key)
+            if isinstance(inner, dict):
+                for key in ("value", "v", "raw", "mean", "avg", "latest"):
+                    if key in inner and inner.get(key) is not None:
+                        return inner.get(key)
     return v
 
 
-def _build_explain(sst: float, chl: float, wind: float, wave: float, ssh: float | None, result: Any) -> dict[str, Any]:
+def _to_float(v: Any) -> float | None:
+    v = _unwrap_metric(v)
+    if v is None:
+        return None
+    try:
+        out = float(v)
+        if math.isnan(out) or math.isinf(out):
+            return None
+        return out
+    except (TypeError, ValueError):
+        return None
+
+
+def _extract_metric(payload: dict[str, Any], *names: str) -> float | None:
+    metrics = payload.get("metrics", {})
+    inputs = payload.get("inputs", {})
+
+    roots: list[dict[str, Any]] = [payload]
+    if isinstance(metrics, dict):
+        roots.append(metrics)
+    if isinstance(inputs, dict):
+        roots.append(inputs)
+
+    for name in names:
+        if not name:
+            continue
+        for root in roots:
+            if name in root:
+                val = _to_float(root.get(name))
+                if val is not None:
+                    return val
+    return None
+
+
+def _build_explain(
+    sst: float,
+    chl: float,
+    wind: float,
+    wave: float,
+    ssh: float | None,
+    result: Any,
+) -> dict[str, Any]:
     drivers: list[str] = []
 
     if sst >= 30.5:
@@ -139,47 +181,61 @@ async def osi_today(region: str = "aceh"):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"signals fetch failed: {e}") from e
 
-    metrics = j.get("metrics", {})
+    metrics = j.get("metrics", {}) if isinstance(j.get("metrics"), dict) else {}
+    inputs = j.get("inputs", {}) if isinstance(j.get("inputs"), dict) else {}
 
-    def pick(root: dict, key: str, alt: str | None = None):
-        if root.get(key) is not None:
-            return root.get(key)
-        if alt and root.get(alt) is not None:
-            return root.get(alt)
-        return _pick_metric(metrics, key, alt)
-
-    sst = pick(j, "sst_c", "sst")
-    chl = pick(j, "chl_mg_m3", "chl")
-    wind = pick(j, "wind_ms", "wind")
-    wave = pick(j, "wave_m", "wave")
-    ssh = pick(j, "ssh_cm", "ssh")
+    sst = _extract_metric(j, "sst_c", "sst")
+    chl = _extract_metric(j, "chl_mg_m3", "chl")
+    wind = _extract_metric(j, "wind_ms", "wind")
+    wave = _extract_metric(j, "wave_hs_m", "wave_m", "wave")
+    ssh = _extract_metric(j, "ssh_cm", "ssh")
+    sal = _extract_metric(j, "sal_psu", "sal")
 
     if sst is None or chl is None or wind is None or wave is None:
         raise HTTPException(
             status_code=422,
             detail={
-                "error": "missing required metrics",
+                "error": "missing/invalid required metrics",
                 "sst": sst,
                 "chl": chl,
                 "wind": wind,
                 "wave": wave,
                 "ssh": ssh,
+                "sal": sal,
+                "top_level": {
+                    "sst_c": j.get("sst_c"),
+                    "chl_mg_m3": j.get("chl_mg_m3"),
+                    "wind_ms": j.get("wind_ms"),
+                    "wave_m": j.get("wave_m"),
+                    "ssh_cm": j.get("ssh_cm"),
+                    "sal_psu": j.get("sal_psu"),
+                },
+                "metrics_keys": list(metrics.keys()),
+                "inputs_keys": list(inputs.keys()),
+                "metrics_excerpt": {
+                    "wind": metrics.get("wind"),
+                    "wave": metrics.get("wave"),
+                    "sst": metrics.get("sst"),
+                    "chl": metrics.get("chl"),
+                },
             },
         )
 
-    date_utc = _safe_date(j.get("date_utc") or (j.get("generated_at", "")[:10] if j.get("generated_at") else None))
+    date_utc = _safe_date(
+        j.get("date_utc") or (j.get("generated_at", "")[:10] if j.get("generated_at") else None)
+    )
     generated_at = j.get("generated_at") or j.get("meta", {}).get("generated_at")
     completeness_ratio = 0.95
 
     payload = OsiFeatures(
         region=region,
         date=date_utc or "unknown",
-        sst_c=float(sst),
-        chl_mg_m3=float(chl),
-        wind_ms=float(wind),
-        wave_hs_m=float(wave),
+        sst_c=sst,
+        chl_mg_m3=chl,
+        wind_ms=wind,
+        wave_hs_m=wave,
         thermocline_depth_m=110.0,
-        ssh_anom_cm=float(ssh) if ssh is not None else None,
+        ssh_anom_cm=ssh,
         freshness_hours=6.0,
         completeness_ratio=completeness_ratio,
         zone_class="shelf",
@@ -192,15 +248,18 @@ async def osi_today(region: str = "aceh"):
     return {
         "source": "signals_today",
         "upstream_url": url,
-        "region": j.get("region", {}).get("name", region) if isinstance(j.get("region"), dict) else j.get("region", region),
+        "region": j.get("region", {}).get("name", region)
+        if isinstance(j.get("region"), dict)
+        else j.get("region", region),
         "generated_at": generated_at,
         "date_utc": date_utc,
         "inputs_used": {
             "sst_c": sst,
             "chl_mg_m3": chl,
             "wind_ms": wind,
-            "wave_m": wave,
+            "wave_hs_m": wave,
             "ssh_cm": ssh,
+            "sal_psu": sal,
         },
         "trust": {
             "source": "Signals today → OSI derived index",
@@ -212,6 +271,6 @@ async def osi_today(region: str = "aceh"):
             "mode": "daily-synthesis",
             "caveat": "OSI today adalah indeks sintesis berbasis sinyal oseanografi harian dan tidak identik dengan pengukuran langsung kesehatan ekosistem.",
         },
-        "explain": _build_explain(float(sst), float(chl), float(wind), float(wave), float(ssh) if ssh is not None else None, result),
+        "explain": _build_explain(sst, chl, wind, wave, ssh, result),
         "osi": result,
     }
