@@ -80,6 +80,8 @@ mount("app.routers.rumpon", prefix="")
 mount("app.routers.time_series", prefix="")
 mount("app.routers.time_series_profile", prefix="")
 
+mount("app.routers.fgi_time_series_station", prefix="")
+
 # -----------------------------------------------------------------------------
 # OCEAN INTELLIGENCE ROUTERS
 # -----------------------------------------------------------------------------
