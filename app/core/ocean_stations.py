@@ -8,8 +8,8 @@ STATIONS: dict[str, dict[str, Any]] = {
         "label": "Selat Malaka",
         "short_label": "Malaka",
         "basin": "Malacca Strait",
-        "lat": 5.30,
-        "lon": 97.20,
+        "lat": 5.300753,
+        "lon": 96.420167,
         "sampling": "window_mean_3x3_wet_cells",
     },
     "andaman": {
@@ -17,8 +17,8 @@ STATIONS: dict[str, dict[str, Any]] = {
         "label": "Laut Utara Aceh (Andaman)",
         "short_label": "Andaman",
         "basin": "Andaman Sea",
-        "lat": 5.85,
-        "lon": 95.25,
+        "lat": 5.896967,
+        "lon": 94.946861,
         "sampling": "window_mean_3x3_wet_cells",
     },
     "hindia": {
@@ -26,8 +26,8 @@ STATIONS: dict[str, dict[str, Any]] = {
         "label": "Samudra Hindia",
         "short_label": "Hindia",
         "basin": "Indian Ocean",
-        "lat": 4.60,
-        "lon": 94.80,
+        "lat": 5.153900,
+        "lon": 94.648253,
         "sampling": "window_mean_3x3_wet_cells",
     },
 }
