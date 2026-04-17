@@ -59,6 +59,16 @@ mount("app.routers.me", prefix="")
 mount("app.routers.fgi", prefix="")
 mount("app.routers.fgi", prefix="/api/v1")
 
+# ✅ NEW: Behavior FGI
+mount("app.routers.fgi_behavior", prefix="")
+mount("app.routers.fgi_behavior", prefix="/api/v1")
+
+mount("app.routers.fgi_zones", prefix="")
+mount("app.routers.fgi_zones", prefix="/api/v1")
+
+mount("app.routers.fgi_decision", prefix="")
+mount("app.routers.fgi_decision", prefix="/api/v1")
+
 mount("app.routers.signals", prefix="")
 mount("app.routers.earth", prefix="")
 mount("app.routers.waves", prefix="")
@@ -88,10 +98,17 @@ mount("app.routers.fgi_time_series_station", prefix="")
 mount("app.routers.osi_v1", prefix="")
 mount("app.routers.osi_today", prefix="")
 mount("app.routers.osi_map", prefix="")
-mount("app.routers.insight_today", prefix="")
+# mount("app.routers.insight_today", prefix="")
 mount("app.routers.brief_today", prefix="")
 
 mount("app.routers.ocean_ask", prefix="")
+
+mount("app.routers.iod", prefix="")
+mount("app.routers.iod", prefix="/api/v1")
+
+mount("app.routers.insight", prefix="")
+mount("app.routers.insight", prefix="/api/v1")
+
 
 # Optional init_db
 try:
