@@ -133,7 +133,6 @@ def load_first_valid_da(ds: xr.Dataset, var: str) -> xr.DataArray:
 
 
 def subset_bbox(da: xr.DataArray, latn: str, lonn: str) -> xr.DataArray:
-    # kalau lat/lon 1D, aman pakai slice
     try:
         lat_da = da[latn]
         lon_da = da[lonn]
@@ -153,7 +152,6 @@ def subset_bbox(da: xr.DataArray, latn: str, lonn: str) -> xr.DataArray:
             return da.sel({latn: lat_slice, lonn: lon_slice})
     except Exception:
         pass
-    # fallback: biarkan apa adanya
     return da
 
 
@@ -196,7 +194,6 @@ def point_or_mean_multi(
     - coba nearest finite
     - kalau NaN, coba mean finite pada window box yang makin besar
     """
-    # buang dim non-spatial (time/depth/level) kalau masih ada
     x = da
     for dim in list(x.dims):
         if dim not in (latn, lonn):
@@ -205,12 +202,10 @@ def point_or_mean_multi(
             except Exception:
                 pass
 
-    # 1) nearest (finite)
     v0 = scalar_point(x, latn, lonn, lat0, lon0)
     if v0 is not None:
         return v0
 
-    # 2) window mean (finite only)
     try:
         lat_da = x[latn]
         lon_da = x[lonn]
@@ -236,7 +231,6 @@ def point_or_mean_multi(
                     return mv
             return None
 
-        # kalau lat/lon 2D (nav_lat/nav_lon), cari nearest index lalu window index
         if lat_da.ndim == 2 and lon_da.ndim == 2:
             lat2 = np.asarray(lat_da.values)
             lon2 = np.asarray(lon_da.values)
@@ -267,7 +261,6 @@ def build_wind_speed(
 ) -> tuple[float | None, xr.DataArray | None, tuple[str, str] | None]:
     lat, lon = guess_lat_lon_names(ds)
 
-    # 1) coba direct speed variable dulu
     direct_speed_vars = [
         "wind_speed",
         "windspeed",
@@ -286,7 +279,6 @@ def build_wind_speed(
             if val is not None:
                 return val, da, (lat, lon)
 
-    # 2) coba pasangan komponen u/v
     pairs = [
         ("eastward_wind", "northward_wind"),
         ("u10", "v10"),
@@ -309,6 +301,235 @@ def build_wind_speed(
                 return val, speed, (lat, lon)
 
     return None, None, None
+
+
+def _clamp01(x: float) -> float:
+    return max(0.0, min(1.0, float(x)))
+
+
+def _gaussian_score(x: float | None, center: float, sigma: float) -> float | None:
+    if x is None:
+        return None
+    try:
+        z = (float(x) - center) / float(sigma)
+        return float(np.exp(-0.5 * z * z))
+    except Exception:
+        return None
+
+
+def _chlorophyll_score(chl: float | None) -> float | None:
+    """
+    Skor produktivitas berbasis CHL.
+    Naik cepat pada CHL rendah, lalu jenuh pada nilai sedang-tinggi.
+    """
+    if chl is None:
+        return None
+    try:
+        x = float(chl)
+        if x <= 0:
+            return 0.0
+        score = 1.0 - np.exp(-x / 0.18)
+        return _clamp01(float(score))
+    except Exception:
+        return None
+
+
+def compute_fgi_realtime(
+    sst_c: float | None,
+    chl_mg_m3: float | None,
+    sal_psu: float | None,
+) -> float | None:
+    """
+    FGI realtime v1:
+    - SST optimum sekitar 29.0 C
+    - SAL optimum sekitar 33.2 psu
+    - CHL pakai saturating productivity curve
+    """
+    sst_score = _gaussian_score(sst_c, center=29.0, sigma=1.2)
+    sal_score = _gaussian_score(sal_psu, center=33.2, sigma=0.7)
+    chl_score = _chlorophyll_score(chl_mg_m3)
+
+    comps = []
+    weights = []
+
+    if sst_score is not None:
+        comps.append(sst_score)
+        weights.append(0.40)
+
+    if chl_score is not None:
+        comps.append(chl_score)
+        weights.append(0.35)
+
+    if sal_score is not None:
+        comps.append(sal_score)
+        weights.append(0.25)
+
+    if not comps or not weights or sum(weights) == 0:
+        return None
+
+    score = float(np.average(comps, weights=weights))
+    return _clamp01(score)
+
+
+def classify_fgi_band(score: float | None) -> str | None:
+    if score is None:
+        return None
+    if score >= 0.66:
+        return "high"
+    if score >= 0.33:
+        return "medium"
+    return "low"
+
+
+def _inverse_risk_score(x: float | None, center: float, sigma: float) -> float | None:
+    """
+    Skor 1 bila dekat pusat, turun bila menjauh.
+    Cocok untuk SST, CHL, SSH.
+    """
+    if x is None:
+        return None
+    try:
+        z = (float(x) - center) / float(sigma)
+        return _clamp01(float(np.exp(-0.5 * z * z)))
+    except Exception:
+        return None
+
+
+def _wave_stability_score(wave_m: float | None) -> float | None:
+    """
+    Gelombang rendah-menengah = lebih stabil.
+    Di atas ~2.5 m skor turun tajam.
+    """
+    if wave_m is None:
+        return None
+    try:
+        x = float(wave_m)
+        score = 1.0 / (1.0 + (x / 1.5) ** 2)
+        return _clamp01(score)
+    except Exception:
+        return None
+
+
+def compute_osi_realtime(
+    sst_c: float | None,
+    chl_mg_m3: float | None,
+    ssh_cm: float | None,
+    wave_m: float | None,
+) -> float | None:
+    """
+    OSI realtime v1:
+    - SST optimum sekitar 29.0 C
+    - CHL optimum sekitar 0.25 mg/m3
+    - SSH optimum sekitar 50 cm
+    - Wave makin tinggi -> kestabilan turun
+    """
+    sst_score = _inverse_risk_score(sst_c, center=29.0, sigma=1.2)
+    chl_score = _inverse_risk_score(chl_mg_m3, center=0.25, sigma=0.18)
+    ssh_score = _inverse_risk_score(ssh_cm, center=50.0, sigma=8.0)
+    wave_score = _wave_stability_score(wave_m)
+
+    comps = []
+    weights = []
+
+    if sst_score is not None:
+        comps.append(sst_score)
+        weights.append(0.35)
+
+    if chl_score is not None:
+        comps.append(chl_score)
+        weights.append(0.25)
+
+    if ssh_score is not None:
+        comps.append(ssh_score)
+        weights.append(0.20)
+
+    if wave_score is not None:
+        comps.append(wave_score)
+        weights.append(0.20)
+
+    if not comps or sum(weights) == 0:
+        return None
+
+    score = float(np.average(comps, weights=weights))
+    return _clamp01(score)
+
+
+def classify_osi_band(score: float | None) -> str | None:
+    if score is None:
+        return None
+    if score >= 0.66:
+        return "high"
+    if score >= 0.33:
+        return "medium"
+    return "low"
+
+
+def _thermal_penalty_score(sst_c: float | None) -> float | None:
+    """
+    Penalti termal:
+    - mendekati 29 C -> penalti kecil (score tinggi)
+    - makin panas / makin jauh -> score turun
+    """
+    if sst_c is None:
+        return None
+    try:
+        return _clamp01(float(np.exp(-0.5 * ((float(sst_c) - 29.0) / 1.4) ** 2)))
+    except Exception:
+        return None
+
+
+def compute_msi_realtime(
+    fgi: float | None,
+    osi: float | None,
+    wave_m: float | None,
+    sst_c: float | None,
+) -> float | None:
+    """
+    MSI realtime v1:
+    - berbasis peluang pemanfaatan (FGI)
+    - kestabilan/kesehatan laut (OSI)
+    - moderasi operasional gelombang
+    - penalti stress termal
+    """
+    wave_score = _wave_stability_score(wave_m)
+    thermal_score = _thermal_penalty_score(sst_c)
+
+    comps = []
+    weights = []
+
+    if osi is not None:
+        comps.append(float(osi))
+        weights.append(0.45)
+
+    if fgi is not None:
+        comps.append(float(fgi))
+        weights.append(0.30)
+
+    if wave_score is not None:
+        comps.append(float(wave_score))
+        weights.append(0.25)
+
+    if not comps or sum(weights) == 0:
+        return None
+
+    base_score = float(np.average(comps, weights=weights))
+
+    if thermal_score is None:
+        final_score = base_score
+    else:
+        final_score = base_score * (0.70 + 0.30 * thermal_score)
+
+    return _clamp01(final_score)
+
+
+def classify_msi_band(score: float | None) -> str | None:
+    if score is None:
+        return None
+    if score >= 0.66:
+        return "high"
+    if score >= 0.33:
+        return "medium"
+    return "low"
 
 
 def compute_metrics(base_day: date, max_back: int = 10) -> dict:
@@ -419,15 +640,13 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
             ds.close()
     add_metric("wave", "m", wave_val, "wave_anfc", pday, p)
 
-            # -------- WIND (speed / u,v -> speed, with valid-file fallback) --------
+    # -------- WIND --------
     wind_val = None
     wind_da_for_points: xr.DataArray | None = None
     wind_latlon: tuple[str, str] | None = None
     p = None
     pday = None
 
-    # jangan langsung percaya file terbaru; cari file terbaru yang benar-benar
-    # menghasilkan nilai angin finite
     for i in range(max_back + 1):
         cand_day = base_day - timedelta(days=i)
         cand_p = default_out_path("wind_nrt", cand_day)
@@ -487,7 +706,6 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
 
         rec = {"point": {"lat": lat0, "lon": lon0}, "metrics": {}}
 
-        # SST: box kecil cukup
         rec["metrics"]["sst_c"] = sample_from_file(
             "sst_nrt",
             ["thetao", "sst", "analysed_sst"],
@@ -496,7 +714,6 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
             box_seq=[0.12, 0.20, 0.35],
         )
 
-        # CHL: dekat pantai sering mask → box lebih agresif
         rec["metrics"]["chl"] = sample_from_file(
             "chl_nrt",
             ["CHL", "chl", "chlor_a", "chlorophyll"],
@@ -505,7 +722,6 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
             box_seq=[0.20, 0.35, 0.50, 0.80, 1.20, 1.80],
         )
 
-        # Hs: biasanya stabil
         rec["metrics"]["hs_m"] = sample_from_file(
             "wave_anfc",
             ["VHM0", "hs", "swh", "wave_height"],
@@ -514,7 +730,6 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
             box_seq=[0.12, 0.20, 0.35, 0.50],
         )
 
-        # SSH: cm
         rec["metrics"]["ssh_cm"] = sample_from_file(
             "ssh_anfc",
             ["zos", "ssh"],
@@ -524,7 +739,6 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
             box_seq=[0.12, 0.20, 0.35, 0.50],
         )
 
-        # WIND: pakai speed DA yang sudah dihitung, cari finite pakai box bertahap
         if wind_da_for_points is not None and wind_latlon is not None:
             latn, lonn = wind_latlon
             rec["metrics"]["wind_ms"] = point_or_mean_multi(
@@ -540,7 +754,7 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
 
         out["quick_compare"][key] = rec
 
-    # alias flat keys (biar kompatibel sama UI)
+    # alias flat keys
     m = out["metrics"]
     out["sst_c"] = (m.get("sst") or {}).get("value")
     out["chl_mg_m3"] = (m.get("chl") or {}).get("value")
@@ -548,6 +762,79 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
     out["wave_m"] = (m.get("wave") or {}).get("value")
     out["ssh_cm"] = (m.get("ssh") or {}).get("value")
     out["sal_psu"] = (m.get("sal") or {}).get("value")
+
+    # -------- FGI realtime --------
+    fgi_val = compute_fgi_realtime(
+        sst_c=out.get("sst_c"),
+        chl_mg_m3=out.get("chl_mg_m3"),
+        sal_psu=out.get("sal_psu"),
+    )
+    fgi_band = classify_fgi_band(fgi_val)
+
+    out["metrics"]["fgi"] = {
+        "value": None if fgi_val is None else float(fgi_val),
+        "unit": "index",
+        "source_kind": "fgi_realtime_v1",
+        "source_date": out.get("date_utc"),
+        "source_path": None,
+        "band": fgi_band,
+        "note": "FGI realtime v1 from current SST, CHL, SAL",
+        "inputs": {
+            "sst_c": out.get("sst_c"),
+            "chl_mg_m3": out.get("chl_mg_m3"),
+            "sal_psu": out.get("sal_psu"),
+        },
+    }
+
+    # -------- OSI realtime --------
+    osi_val = compute_osi_realtime(
+        sst_c=out.get("sst_c"),
+        chl_mg_m3=out.get("chl_mg_m3"),
+        ssh_cm=out.get("ssh_cm"),
+        wave_m=out.get("wave_m"),
+    )
+    osi_band = classify_osi_band(osi_val)
+
+    out["metrics"]["osi"] = {
+        "value": None if osi_val is None else float(osi_val),
+        "unit": "index",
+        "source_kind": "osi_realtime_v1",
+        "source_date": out.get("date_utc"),
+        "source_path": None,
+        "band": osi_band,
+        "note": "OSI realtime v1 from current SST, CHL, SSH, wave",
+        "inputs": {
+            "sst_c": out.get("sst_c"),
+            "chl_mg_m3": out.get("chl_mg_m3"),
+            "ssh_cm": out.get("ssh_cm"),
+            "wave_m": out.get("wave_m"),
+        },
+    }
+
+    # -------- MSI realtime --------
+    msi_val = compute_msi_realtime(
+        fgi=fgi_val,
+        osi=osi_val,
+        wave_m=out.get("wave_m"),
+        sst_c=out.get("sst_c"),
+    )
+    msi_band = classify_msi_band(msi_val)
+
+    out["metrics"]["msi"] = {
+        "value": None if msi_val is None else float(msi_val),
+        "unit": "index",
+        "source_kind": "msi_realtime_v1",
+        "source_date": out.get("date_utc"),
+        "source_path": None,
+        "band": msi_band,
+        "note": "MSI realtime v1 from FGI, OSI, wave, and thermal penalty",
+        "inputs": {
+            "fgi": fgi_val,
+            "osi": osi_val,
+            "wave_m": out.get("wave_m"),
+            "sst_c": out.get("sst_c"),
+        },
+    }
 
     if all(out.get(k) is None for k in ["sst_c", "chl_mg_m3", "wind_ms", "wave_m", "ssh_cm"]):
         out["ok"] = False
@@ -562,6 +849,22 @@ def main() -> int:
     out_dir = ROOT / "data" / "earth"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / "earth_signals_today.json"
+    yesterday_path = out_dir / "earth_signals_yesterday.json"
+
+    # simpan file lama sebagai versi kemarin hanya jika tanggalnya berbeda
+    if out_path.exists():
+        try:
+            old_obj = json.loads(out_path.read_text(encoding="utf-8"))
+            old_date = old_obj.get("date_utc")
+            new_date = obj.get("date_utc")
+
+            if old_date and new_date and str(old_date) != str(new_date):
+                yesterday_path.write_text(
+                    json.dumps(old_obj, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+        except Exception:
+            pass
 
     out_path.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"[OK] wrote {out_path} (ok={obj.get('ok')})")

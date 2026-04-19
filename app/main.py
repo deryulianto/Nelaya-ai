@@ -109,6 +109,9 @@ mount("app.routers.iod", prefix="/api/v1")
 mount("app.routers.insight", prefix="")
 mount("app.routers.insight", prefix="/api/v1")
 
+mount("app.routers.narrative", prefix="")
+mount("app.routers.narrative", prefix="/api/v1")
+
 
 # Optional init_db
 try:
