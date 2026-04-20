@@ -532,6 +532,29 @@ def classify_msi_band(score: float | None) -> str | None:
     return "low"
 
 
+def resolve_effective_date(inputs: dict, fallback_date: str) -> str:
+    """
+    Tentukan tanggal snapshot efektif berdasarkan tanggal input data yang benar-benar dipakai.
+    Ambil tanggal terbaru dari semua inputs[*]["day"] yang tersedia.
+    """
+    days: list[str] = []
+
+    for info in inputs.values():
+        if not isinstance(info, dict):
+            continue
+        day = info.get("day")
+        if isinstance(day, str) and day.strip():
+            days.append(day.strip())
+
+    if not days:
+        return fallback_date
+
+    # gunakan tanggal terbaru yang benar-benar dipakai oleh input
+    return max(days)
+
+
+
+
 def compute_metrics(base_day: date, max_back: int = 10) -> dict:
     out: dict = {
         "ok": True,
@@ -835,6 +858,14 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
             "sst_c": out.get("sst_c"),
         },
     }
+
+            # selaraskan tanggal snapshot dengan tanggal input efektif yang benar-benar dipakai
+    out["date_utc"] = resolve_effective_date(out["inputs"], out["date_utc"])
+
+    # sinkronkan source_date indeks turunan ke tanggal snapshot efektif
+    for idx_key in ["fgi", "osi", "msi"]:
+        if idx_key in out["metrics"]:
+            out["metrics"][idx_key]["source_date"] = out["date_utc"]
 
     if all(out.get(k) is None for k in ["sst_c", "chl_mg_m3", "wind_ms", "wave_m", "ssh_cm"]):
         out["ok"] = False
