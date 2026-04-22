@@ -101,6 +101,9 @@ mount("app.routers.osi_map", prefix="")
 # mount("app.routers.insight_today", prefix="")
 mount("app.routers.brief_today", prefix="")
 
+mount("app.routers.island", prefix="")
+mount("app.routers.island", prefix="/api/v1")
+
 mount("app.routers.ocean_ask", prefix="")
 
 mount("app.routers.iod", prefix="")
@@ -111,6 +114,12 @@ mount("app.routers.insight", prefix="/api/v1")
 
 mount("app.routers.narrative", prefix="")
 mount("app.routers.narrative", prefix="/api/v1")
+
+mount("app.routers.bleaching", prefix="")
+mount("app.routers.bleaching", prefix="/api/v1")
+
+mount("app.routers.decision", prefix="")
+mount("app.routers.decision", prefix="/api/v1")
 
 
 # Optional init_db
