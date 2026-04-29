@@ -375,7 +375,7 @@ def _build_interpretation(
     status = _overall_status(score)
 
     return (
-        f"Biodiversity Watch v0.1 membaca kondisi hari ini sebagai '{status['label']}'. "
+        f"Biodiversity membaca kondisi hari ini sebagai '{status['label']}'. "
         f"Sinyal termal: {thermal['label']}. "
         f"Sinyal produktivitas: {productivity['label']}. "
         f"Kondisi fisik: {physical['label']}. "
