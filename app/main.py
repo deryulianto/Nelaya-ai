@@ -80,6 +80,8 @@ mount("app.routers.fgi_cache", prefix="")
 mount("app.routers.fgi_map", prefix="")
 mount("app.routers.fgi_map_grid", prefix="")
 mount("app.routers.fgi_recommendations", prefix="")
+mount("app.routers.fgi_plan", prefix="")
+mount("app.routers.fgi_trip", prefix="")
 mount("app.routers.ocean_memory", prefix="")
 mount("app.routers.fgi_time_series", prefix="")
 mount("app.routers.fgi_time_series_profile", prefix="")
@@ -118,8 +120,12 @@ mount("app.routers.narrative", prefix="/api/v1")
 mount("app.routers.bleaching", prefix="")
 mount("app.routers.bleaching", prefix="/api/v1")
 
+# Biodiversity Watch v0.1
+mount("app.routers.biodiversity", prefix="")
+
 mount("app.routers.decision", prefix="")
 mount("app.routers.decision", prefix="/api/v1")
+
 
 
 # Optional init_db
