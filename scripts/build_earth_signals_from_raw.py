@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+
 import json
 from pathlib import Path
 from datetime import datetime, date, timedelta, timezone
@@ -11,6 +12,15 @@ import xarray as xr  # type: ignore
 ROOT = Path(__file__).resolve().parents[1]
 RAW_BASE = ROOT / "data" / "raw" / "aceh_simeulue"
 
+import sys
+
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from app.services.ocean_current import load_current_generic
+
+
+
 BBOX = dict(min_lon=92.0, max_lon=99.0, min_lat=1.0, max_lat=7.0)
 
 POINTS = {
@@ -19,6 +29,48 @@ POINTS = {
 }
 
 MIN_BYTES = 10_000
+
+
+def find_latest_current_file() -> Path | None:
+    roots = [
+        RAW_BASE / "cur_nrt",
+        RAW_BASE / "currents",
+    ]
+
+    candidates: list[Path] = []
+    for root in roots:
+        if root.exists():
+            candidates.extend([p for p in root.rglob("*.nc") if is_ok_file(p)])
+            candidates.extend([p for p in root.rglob("*.nc4") if is_ok_file(p)])
+
+    if not candidates:
+        return None
+
+    # 1) Prioritas NRT harian jika nanti sudah ada
+    nrt = [
+        p for p in candidates
+        if "/cur_nrt/" in p.as_posix() or "/current_nrt/" in p.as_posix()
+    ]
+    if nrt:
+        return sorted(nrt, key=lambda x: x.stat().st_mtime)[-1]
+
+    # 2) Prioritas geostrophic tahunan terbaru
+    geostrophic = [
+        p for p in candidates
+        if p.name.startswith("currents_geostrophic_aceh_")
+    ]
+    if geostrophic:
+        return sorted(geostrophic, key=lambda x: x.name)[-1]
+
+    # 3) Abaikan tmp_2012 agar tidak jadi default
+    safe_candidates = [
+        p for p in candidates
+        if "/tmp_2012/" not in p.as_posix()
+    ]
+    if safe_candidates:
+        return sorted(safe_candidates, key=lambda x: x.stat().st_mtime)[-1]
+
+    return None
 
 
 def utc_today() -> date:
@@ -694,6 +746,61 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
     out["inputs"]["wind_nrt"] = {"path": None if p is None else p.as_posix(), "day": pday}
     add_metric("wind", "m/s", wind_val, "wind_nrt", pday, p)
 
+            # -------- CURRENT / ARUS LAUT (safe JSON cache layer) --------
+    current_cache = ROOT / "data" / "earth" / "current_today.json"
+
+    current_val = None
+    current_u_val = None
+    current_v_val = None
+    current_source = None
+
+    if current_cache.exists():
+        try:
+            cur_obj = json.loads(current_cache.read_text(encoding="utf-8"))
+            current_val = cur_obj.get("current_ms")
+            current_u_val = cur_obj.get("current_u_ms")
+            current_v_val = cur_obj.get("current_v_ms")
+            current_source = cur_obj.get("source_path")
+
+            out["inputs"]["current"] = {
+                "path": current_source,
+                "day": None,
+                "cache": current_cache.as_posix(),
+                "note": "Current loaded from JSON cache to avoid NetCDF/HDF5 segfault in main build.",
+            }
+        except Exception as e:
+            out["inputs"]["current"] = {
+                "path": None,
+                "day": None,
+                "cache": current_cache.as_posix(),
+                "error": str(e),
+            }
+    else:
+        out["inputs"]["current"] = {
+            "path": None,
+            "day": None,
+            "cache": current_cache.as_posix(),
+            "note": "No current cache found.",
+        }
+
+    out["metrics"]["current"] = {
+        "value": None if current_val is None else float(current_val),
+        "unit": "m/s",
+        "source_kind": "current_nrt_cache_v1",
+        "source_date": None,
+        "source_path": current_source,
+        "note": "Ocean current speed from cached NRT u/v vector. Safe layer; not yet modifying FGI.",
+        "components": {
+            "u_ms": None if current_u_val is None else float(current_u_val),
+            "v_ms": None if current_v_val is None else float(current_v_val),
+        },
+    }
+
+    out["current_ms"] = (out["metrics"].get("current") or {}).get("value")
+    out["current_u_ms"] = ((out["metrics"].get("current") or {}).get("components") or {}).get("u_ms")
+    out["current_v_ms"] = ((out["metrics"].get("current") or {}).get("components") or {}).get("v_ms")
+
+
     # ---------- Quick compare points ----------
     def sample_from_file(
         kind_key: str,
@@ -857,6 +964,7 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
             "wave_m": out.get("wave_m"),
             "sst_c": out.get("sst_c"),
         },
+      
     }
 
             # selaraskan tanggal snapshot dengan tanggal input efektif yang benar-benar dipakai
