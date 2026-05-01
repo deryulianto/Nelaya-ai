@@ -31,6 +31,38 @@ POINTS = {
 MIN_BYTES = 10_000
 
 
+def compute_fgi_current_aware(
+    fgi_base: float | None,
+    current_ms: float | None,
+) -> float | None:
+    """
+    FGI current-aware v1:
+    - arus terlalu lemah -> distribusi rendah
+    - arus sedang -> optimal
+    - arus terlalu kuat -> sedikit penalti (operasional nelayan)
+    """
+
+    if fgi_base is None or current_ms is None:
+        return None
+
+    try:
+        c = float(current_ms)
+
+        if c < 0.15:
+            current_score = 0.4
+        elif c < 0.45:
+            current_score = 0.8
+        else:
+            current_score = 0.6
+
+        # scaling ringan (tidak merusak model lama)
+        factor = 0.9 + 0.2 * current_score
+
+        return _clamp01(float(fgi_base) * factor)
+
+    except Exception:
+        return None
+
 def find_latest_current_file() -> Path | None:
     roots = [
         RAW_BASE / "cur_nrt",
@@ -915,7 +947,30 @@ def compute_metrics(base_day: date, max_back: int = 10) -> dict:
             "sal_psu": out.get("sal_psu"),
         },
     }
+    out["fgi"] = (out["metrics"].get("fgi") or {}).get("value")
 
+        # -------- FGI current-aware (shadow model) --------
+    fgi_ca_val = compute_fgi_current_aware(
+        fgi_base=fgi_val,
+        current_ms=out.get("current_ms"),
+    )
+
+    out["metrics"]["fgi_current_aware"] = {
+        "value": None if fgi_ca_val is None else float(fgi_ca_val),
+        "unit": "index",
+        "source_kind": "fgi_current_aware_v1",
+        "source_date": out.get("date_utc"),
+        "source_path": None,
+        "note": "FGI adjusted with ocean current (experimental shadow model)",
+        "inputs": {
+            "fgi_base": fgi_val,
+            "current_ms": out.get("current_ms"),
+        },
+    }
+
+    out["fgi_current_aware"] = (out["metrics"].get("fgi_current_aware") or {}).get("value") 
+
+ 
     # -------- OSI realtime --------
     osi_val = compute_osi_realtime(
         sst_c=out.get("sst_c"),

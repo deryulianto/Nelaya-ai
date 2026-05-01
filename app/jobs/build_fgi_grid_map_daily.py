@@ -1,12 +1,18 @@
 from __future__ import annotations
 
 import json
+import sys
 from pathlib import Path
 from datetime import datetime, timezone, date, timedelta
 import argparse
 
 import numpy as np
 import xarray as xr
+
+ROOT = Path(__file__).resolve().parents[2]
+
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 # Reuse model/scaler yang sudah kamu load di router fgi
 from app.routers import fgi as fgi_router
@@ -82,6 +88,40 @@ def take_surface_time(da: xr.DataArray) -> xr.DataArray:
             da = da.isel({dnm: 0})
     return da
 
+def to_band(score: float) -> str:
+    if score >= 0.75:
+        return "High"
+    if score >= 0.50:
+        return "Medium"
+    return "Low"
+
+
+def read_current_ms(root: Path) -> float | None:
+    p = root / "data" / "earth" / "current_today.json"
+    try:
+        if not p.exists():
+            return None
+        obj = json.loads(p.read_text(encoding="utf-8"))
+        v = obj.get("current_ms")
+        return float(v) if v is not None else None
+    except Exception:
+        return None
+
+
+
+def adjust_with_current(score: float, current_ms: float | None) -> float:
+    if current_ms is None:
+        return score
+
+    if current_ms < 0.15:
+        factor = 0.98
+    elif current_ms <= 0.45:
+        factor = 1.06
+    else:
+        factor = 0.94
+
+    return max(0.0, min(1.0, score * factor))
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--date", default="", help="YYYY-MM-DD (default: today UTC)")
@@ -92,6 +132,8 @@ def main():
     d0 = utc_today()
     if args.date:
         d0 = datetime.strptime(args.date, "%Y-%m-%d").date()
+
+    current_ms = read_current_ms(ROOT)
 
     # pilih file lokal terbaru (fallback mundur)
     sst_path = find_latest_local(KINDS["sst"], d0, args.max_back)
@@ -176,13 +218,22 @@ def main():
             sc = float(score_grid[i, j])
             if not np.isfinite(sc):
                 continue
-            band = "High" if sc >= 0.75 else ("Medium" if sc >= 0.50 else "Low")
+            score_ca = adjust_with_current(sc, current_ms)
+
             feats.append({
                 "type": "Feature",
                 "properties": {
-                    "date_utc": sst_path.stem[-10:],  # ambil YYYY-MM-DD dari nama file
-                    "score": round(sc, 6),
-                    "band": band,
+                    "date_utc": sst_path.stem[-10:],
+                    "score": round(score_ca, 6),
+                    "band": to_band(score_ca),
+                    "score_baseline": round(sc, 6),
+                    "band_baseline": to_band(sc),
+
+                    # FGI Grid v2: current-aware shadow value
+                    "score_current_aware": round(float(score_ca), 6),
+                    "band_current_aware": to_band(float(score_ca)),
+                    "current_ms": None if current_ms is None else round(float(current_ms), 6),
+
                     "sst_c": float(sst[i, j]),
                     "sal_psu": float(sal[i, j]),
                     "chl_mg_m3": float(chl[i, j]),
@@ -195,6 +246,22 @@ def main():
     out1 = OUT_DIR / f"fgi_grid_{date_tag}.geojson"
     out2 = OUT_DIR / "latest.geojson"
 
+        # Rank Top 10 berdasarkan FGI current-aware
+    ranked = sorted(
+        feats,
+        key=lambda f: float(f["properties"].get("score_current_aware") or 0.0),
+        reverse=True,
+    )
+
+    for rank, feat in enumerate(ranked, start=1):
+        props = feat["properties"]
+        if rank <= 10:
+            props["rank_current_aware"] = rank
+            props["is_top_current_aware"] = True
+        else:
+            props["rank_current_aware"] = None
+            props["is_top_current_aware"] = False
+
     fc = {
         "type": "FeatureCollection",
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -205,6 +272,11 @@ def main():
                 "sst": str(sst_path),
                 "sal": str(sal_path),
                 "chl": str(chl_path),
+            "current": {
+                "current_ms": current_ms,
+                "method": "global_current_factor_v1",
+                "note": "Current-aware score is a shadow metric; baseline score is preserved.",
+            }, 
             },
             "count": len(feats),
         },
