@@ -1,0 +1,519 @@
+from __future__ import annotations
+
+import json
+import math
+import os
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+from fastapi import APIRouter, Query
+from app.services.pelagic_movement_shift import build_hotspot_shift, build_movement_memory, build_front_signal
+
+
+router = APIRouter(
+    prefix="/fgi/pelagic-movement",
+    tags=["FGI Pelagic Movement"],
+)
+
+
+# ============================================================
+# NELAYA-AI — Pelagic Movement Intelligence v0.1
+# Prinsip:
+# - Tidak mengklaim melihat ikan secara langsung.
+# - Membaca arah peluang habitat pelagis dari dinamika laut.
+# - Confidence sengaja ditahan agar tidak halu.
+# ============================================================
+
+
+LAB_ROOT = Path(os.getenv("NELAYA_AI_LAB_ROOT", "/home/coastalai/NELAYA-AI-LAB"))
+DATA_DIR = Path(os.getenv("NELAYA_AI_DATA_DIR", str(LAB_ROOT / "data")))
+
+EARTH_TODAY_PATH = DATA_DIR / "earth" / "earth_signals_today.json"
+EARTH_YESTERDAY_PATH = DATA_DIR / "earth" / "earth_signals_yesterday.json"
+
+
+def _load_json(path: Path) -> Optional[Dict[str, Any]]:
+    if not path.exists():
+        return None
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _metric(payload: Optional[Dict[str, Any]], *names: str) -> Optional[float]:
+    """
+    Ambil nilai metrik dari beberapa kemungkinan struktur:
+    - payload["metrics"][name]["value"]
+    - payload["metrics"][name]
+    - payload[name]
+    """
+    if not payload:
+        return None
+
+    metrics = payload.get("metrics", {}) if isinstance(payload.get("metrics", {}), dict) else {}
+
+    for name in names:
+        raw = metrics.get(name)
+        if isinstance(raw, dict) and "value" in raw:
+            try:
+                return float(raw["value"])
+            except Exception:
+                pass
+
+        if raw is not None and not isinstance(raw, dict):
+            try:
+                return float(raw)
+            except Exception:
+                pass
+
+        raw2 = payload.get(name)
+        if raw2 is not None:
+            try:
+                return float(raw2)
+            except Exception:
+                pass
+
+    return None
+
+def _metric_obj(payload: Optional[Dict[str, Any]], name: str) -> Dict[str, Any]:
+    if not payload:
+        return {}
+
+    metrics = payload.get("metrics", {})
+    if isinstance(metrics, dict):
+        raw = metrics.get(name)
+        if isinstance(raw, dict):
+            return raw
+
+    return {}
+
+
+
+def _text_value(payload: Optional[Dict[str, Any]], *names: str) -> Optional[str]:
+    if not payload:
+        return None
+    for name in names:
+        value = payload.get(name)
+        if value is not None:
+            return str(value)
+    return None
+
+
+def _bearing_from_uv(u: Optional[float], v: Optional[float]) -> Optional[float]:
+    """
+    u = komponen timur-barat, positif ke timur
+    v = komponen utara-selatan, positif ke utara
+
+    Bearing:
+    0 = utara
+    90 = timur
+    180 = selatan
+    270 = barat
+    """
+    if u is None or v is None:
+        return None
+    if abs(u) < 1e-9 and abs(v) < 1e-9:
+        return None
+
+    deg = math.degrees(math.atan2(u, v))
+    return (deg + 360.0) % 360.0
+
+
+def _direction_id(bearing: Optional[float]) -> str:
+    if bearing is None:
+        return "belum_terbaca"
+
+    sectors = [
+        ("utara", 337.5, 360.0),
+        ("utara", 0.0, 22.5),
+        ("timur_laut", 22.5, 67.5),
+        ("timur", 67.5, 112.5),
+        ("tenggara", 112.5, 157.5),
+        ("selatan", 157.5, 202.5),
+        ("barat_daya", 202.5, 247.5),
+        ("barat", 247.5, 292.5),
+        ("barat_laut", 292.5, 337.5),
+    ]
+
+    for label, low, high in sectors:
+        if low <= bearing < high:
+            return label
+
+    return "belum_terbaca"
+
+
+def _direction_label(direction_id: str) -> str:
+    mapping = {
+        "utara": "utara",
+        "timur_laut": "timur laut",
+        "timur": "timur",
+        "tenggara": "tenggara",
+        "selatan": "selatan",
+        "barat_daya": "barat daya",
+        "barat": "barat",
+        "barat_laut": "barat laut",
+        "belum_terbaca": "belum terbaca",
+    }
+    return mapping.get(direction_id, direction_id.replace("_", " "))
+
+
+def _safety_status(wave_m: Optional[float], wind_ms: Optional[float]) -> Dict[str, Any]:
+    if wave_m is None and wind_ms is None:
+        return {
+            "status": "unknown",
+            "label": "belum terbaca",
+            "score": 0.4,
+            "note": "Data gelombang dan angin belum cukup untuk membaca kelayakan operasi.",
+        }
+
+    wave = wave_m if wave_m is not None else 0.0
+    wind = wind_ms if wind_ms is not None else 0.0
+
+    if wave <= 1.25 and wind <= 6.0:
+        return {
+            "status": "favorable",
+            "label": "relatif layak",
+            "score": 0.85,
+            "note": "Gelombang dan angin relatif mendukung, tetap perlu verifikasi lapangan.",
+        }
+
+    if wave <= 2.0 and wind <= 10.0:
+        return {
+            "status": "caution",
+            "label": "layak hati-hati",
+            "score": 0.6,
+            "note": "Kondisi operasi masih mungkin, tetapi perlu kehati-hatian.",
+        }
+
+    return {
+        "status": "risky",
+        "label": "berisiko",
+        "score": 0.3,
+        "note": "Gelombang atau angin mulai membatasi kelayakan operasi.",
+    }
+
+
+def _sst_status(sst_c: Optional[float], species_group: str) -> Dict[str, Any]:
+    if sst_c is None:
+        return {
+            "status": "unknown",
+            "label": "belum terbaca",
+            "score": 0.4,
+            "note": "SST belum tersedia untuk membaca kenyamanan permukaan.",
+        }
+
+    # Batas ini sengaja dibuat konservatif untuk permukaan laut tropis Aceh.
+    # Nanti dapat dikalibrasi dengan data trip dan CPUE.
+    if species_group == "large_pelagic":
+        if 26.0 <= sst_c <= 30.8:
+            return {
+                "status": "supportive",
+                "label": "mendukung",
+                "score": 0.75,
+                "note": "Suhu permukaan masih berada dalam rentang yang cukup mendukung bagi pelagis besar di perairan tropis.",
+            }
+        if 30.8 < sst_c <= 31.8:
+            return {
+                "status": "warm_caution",
+                "label": "hangat, perlu hati-hati",
+                "score": 0.55,
+                "note": "Suhu permukaan cukup hangat; pelagis besar mungkin lebih sensitif pada struktur bawah permukaan.",
+            }
+        return {
+            "status": "less_supportive",
+            "label": "kurang ideal",
+            "score": 0.4,
+            "note": "SST permukaan kurang ideal; perlu dukungan sinyal lain seperti front, SSH, dan arus.",
+        }
+
+    # medium_pelagic dan small_pelagic cenderung masih toleran terhadap permukaan hangat.
+    if 26.0 <= sst_c <= 31.5:
+        return {
+            "status": "supportive",
+            "label": "mendukung",
+            "score": 0.75,
+            "note": "Suhu permukaan masih cukup mendukung bagi pelagis tropis.",
+        }
+
+    if 31.5 < sst_c <= 32.2:
+        return {
+            "status": "warm_caution",
+            "label": "hangat, perlu hati-hati",
+            "score": 0.55,
+            "note": "Suhu cukup hangat; peluang pelagis lebih perlu dibaca bersama front, CHL, dan arus.",
+        }
+
+    return {
+        "status": "less_supportive",
+        "label": "kurang ideal",
+        "score": 0.4,
+        "note": "SST kurang ideal untuk pembacaan habitat permukaan.",
+    }
+
+
+def _trend(today: Optional[float], yesterday: Optional[float]) -> Dict[str, Any]:
+    if today is None or yesterday is None:
+        return {
+            "available": False,
+            "delta": None,
+            "direction": "unknown",
+        }
+
+    delta = today - yesterday
+    if abs(delta) < 1e-6:
+        direction = "stable"
+    elif delta > 0:
+        direction = "increasing"
+    else:
+        direction = "decreasing"
+
+    return {
+        "available": True,
+        "delta": round(delta, 4),
+        "direction": direction,
+    }
+
+
+def _confidence_label(score: float) -> str:
+    if score >= 0.72:
+        return "tinggi"
+    if score >= 0.5:
+        return "sedang"
+    return "rendah"
+
+
+def _build_narrative(
+    direction_label: str,
+    confidence_label: str,
+    current_speed: Optional[float],
+    fgi: Optional[float],
+    fgi_current_aware: Optional[float],
+    safety: Dict[str, Any],
+    species_group: str,
+) -> str:
+    group_label = {
+        "small_pelagic": "pelagis kecil",
+        "medium_pelagic": "pelagis sedang",
+        "large_pelagic": "pelagis besar",
+        "reef_edge_pelagic": "pelagis sekitar tepi karang/drop-off",
+    }.get(species_group, species_group.replace("_", " "))
+
+    if direction_label == "belum terbaca":
+        return (
+            f"Pembacaan arah peluang {group_label} hari ini belum cukup kuat. "
+            f"NELAYA-AI belum menemukan sinyal arus dan habitat yang cukup untuk menyatakan arah koridor. "
+            f"Kondisi operasi terbaca {safety.get('label', 'belum terbaca')}. "
+            f"Interpretasi ini bersifat konservatif dan perlu validasi lapangan."
+        )
+
+    base = (
+        f"Arah peluang {group_label} hari ini cenderung menuju {direction_label}. "
+        f"Pembacaan ini terutama berasal dari arah arus permukaan dan sinyal FGI harian, "
+        f"bukan klaim bahwa ikan pasti bergerak ke arah tersebut. "
+    )
+
+    if current_speed is not None:
+        base += f"Kecepatan arus permukaan terbaca sekitar {current_speed:.3f} m/s. "
+
+    if fgi is not None:
+        base += f"FGI saat ini terbaca {fgi:.3f}. "
+
+    if fgi_current_aware is not None:
+        base += f"FGI berbasis arus terbaca {fgi_current_aware:.3f}. "
+
+    base += (
+        f"Tingkat keyakinan sementara: {confidence_label}. "
+        f"Kondisi operasi: {safety.get('label', 'belum terbaca')}. "
+        f"Data ini sebaiknya dibaca sebagai koridor peluang habitat, lalu divalidasi dengan trip logger dan catatan nelayan."
+    )
+
+    return base
+
+
+@router.get("/today")
+def pelagic_movement_today(
+    species_group: str = Query(
+        default="medium_pelagic",
+        description="small_pelagic | medium_pelagic | large_pelagic | reef_edge_pelagic",
+    )
+) -> Dict[str, Any]:
+    today = _load_json(EARTH_TODAY_PATH)
+    yesterday = _load_json(EARTH_YESTERDAY_PATH)
+
+    if today is None:
+        return {
+            "module": "pelagic_movement_intelligence",
+            "version": "0.5",
+            "status": "error",
+            "message": f"earth_signals_today.json tidak ditemukan atau tidak dapat dibaca: {EARTH_TODAY_PATH}",
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
+
+    # Ambil tanggal dari berbagai kemungkinan field.
+    date = (
+        _text_value(today, "date", "snapshot_date", "latest_available_date")
+        or datetime.now(timezone.utc).date().isoformat()
+    )
+
+    # Metrik utama.
+    u = _metric(today, "current_u_ms", "uo", "u_current_ms")
+    v = _metric(today, "current_v_ms", "vo", "v_current_ms")
+
+    current_speed = None
+    if u is not None and v is not None:
+        current_speed = math.sqrt(u * u + v * v)
+
+    bearing = _bearing_from_uv(u, v)
+    direction_id = _direction_id(bearing)
+    direction_label = _direction_label(direction_id)
+
+    fgi = _metric(today, "fgi", "fish_ground_index")
+    fgi_y = _metric(yesterday, "fgi", "fish_ground_index")
+
+    fgi_current_aware = _metric(today, "fgi_current_aware", "current_aware_fgi")
+    fgi_current_aware_y = _metric(yesterday, "fgi_current_aware", "current_aware_fgi")
+
+    sst_c = _metric(today, "sst_c", "sst", "sst_mean_c")
+    chl = _metric(today, "chl_mg_m3", "chl", "chlorophyll_a", "chl_mean_mg_m3")
+    ssh = _metric(today, "ssh_cm", "ssh", "sea_surface_height_cm")
+    wave_m = _metric(today, "wave_m", "hs_m", "significant_wave_height_m")
+    wind_ms = _metric(today, "wind_ms", "wind_m_s")
+
+    sst = _sst_status(sst_c, species_group)
+    safety = _safety_status(wave_m, wind_ms)
+
+    fgi_trend = _trend(fgi, fgi_y)
+    fgi_current_aware_trend = _trend(fgi_current_aware, fgi_current_aware_y)
+
+    # Confidence v0.5 sengaja konservatif.
+    confidence_score = 0.25
+
+    if u is not None and v is not None:
+        confidence_score += 0.15
+
+    if current_speed is not None:
+        if current_speed >= 0.03:
+            confidence_score += 0.10
+        if current_speed >= 0.08:
+            confidence_score += 0.05
+
+    if fgi is not None:
+        confidence_score += 0.12
+
+    if fgi_current_aware is not None:
+        confidence_score += 0.12
+
+    if fgi_trend.get("available"):
+        confidence_score += 0.06
+
+    if wave_m is not None or wind_ms is not None:
+        confidence_score += 0.06
+
+    if sst_c is not None:
+        confidence_score += 0.04
+
+    # Karena v0.1 belum memakai centroid hotspot aktual,
+    # confidence tidak boleh terlalu tinggi.
+    confidence_score = min(confidence_score, 0.68)
+    confidence_score = round(confidence_score, 3)
+    confidence = _confidence_label(confidence_score)
+
+    drivers = {
+        "current_vector": {
+            "status": "available" if u is not None and v is not None else "missing",
+            "u_ms": u,
+            "v_ms": v,
+            "speed_ms": round(current_speed, 4) if current_speed is not None else None,
+            "bearing_deg": round(bearing, 1) if bearing is not None else None,
+            "direction": direction_id,
+            "label": direction_label,
+            "interpretation": (
+                "Arus permukaan digunakan sebagai sinyal koridor energi dan konektivitas habitat, bukan bukti ikan pasti ikut arus."
+                if u is not None and v is not None
+                else "Data arus belum tersedia."
+            ),
+        },
+        "fgi": {
+            "value": fgi,
+            "trend_vs_yesterday": fgi_trend,
+        },
+        "fgi_current_aware": {
+            "value": fgi_current_aware,
+            "trend_vs_yesterday": fgi_current_aware_trend,
+        },
+        "sst": {
+            "value_c": sst_c,
+            "status": sst,
+        },
+        "chl": {
+            "value_mg_m3": chl,
+            "source_date": _metric_obj(today, "chl").get("source_date") or today.get("chl_source_date"),
+            "lag_days": _metric_obj(today, "chl").get("lag_days") or today.get("chl_lag_days"),
+            "valid_ratio": _metric_obj(today, "chl").get("valid_ratio") or today.get("chl_valid_ratio"),
+            "data_status": _metric_obj(today, "chl").get("data_status") or today.get("chl_data_status"),
+            "interpretation": "CHL-a dibaca sebagai indikasi produktivitas permukaan, tetapi respons ikan dapat memiliki jeda waktu.",
+},
+        "ssh": {
+            "value_cm": ssh,
+            "interpretation": "SSH membantu membaca struktur massa air, eddy, dan potensi konvergensi/divergensi.",
+        },
+        "safety": {
+            "wave_m": wave_m,
+            "wind_ms": wind_ms,
+            **safety,
+        },
+    }
+
+    hotspot_shift = build_hotspot_shift(DATA_DIR, species_group)
+    movement_memory = build_movement_memory(DATA_DIR, species_group, window_days=3)
+    front_signal = build_front_signal(DATA_DIR, species_group)
+
+    narrative = _build_narrative(
+        direction_label=direction_label,
+        confidence_label=confidence,
+        current_speed=current_speed,
+        fgi=fgi,
+        fgi_current_aware=fgi_current_aware,
+        safety=safety,
+        species_group=species_group,
+    )
+
+    return {
+        "module": "pelagic_movement_intelligence",
+        "version": "0.5",
+        "region": today.get("region", "Aceh"),
+        "date": date,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "species_group": species_group,
+        "movement": {
+            "direction": direction_id,
+            "direction_label": direction_label,
+            "bearing_deg": round(bearing, 1) if bearing is not None else None,
+            "basis": "current_corridor_plus_daily_fgi_signal",
+            "scientific_caution": (
+                "Ini adalah arah peluang koridor habitat pelagis, bukan prediksi pasti arah renang ikan."
+            ),
+        },
+        "confidence": {
+            "label": confidence,
+            "score": confidence_score,
+            "note": (
+                "Confidence v0.5 sengaja dibatasi karena belum memakai tracking centroid hotspot FGI 3–7 hari dan belum dikalibrasi penuh dengan trip logger."
+            ),
+        },
+        "drivers": drivers,
+        "narrative": narrative,
+        "data_quality": {
+            "chl": (today.get("data_quality", {}) or {}).get("chl", {}),
+        },
+        "hotspot_shift": hotspot_shift,
+        "movement_memory": movement_memory,
+        "front_signal": front_signal,
+        "data_sources": {
+            "today_file": str(EARTH_TODAY_PATH),
+            "yesterday_file": str(EARTH_YESTERDAY_PATH) if EARTH_YESTERDAY_PATH.exists() else None,
+        },
+    }
