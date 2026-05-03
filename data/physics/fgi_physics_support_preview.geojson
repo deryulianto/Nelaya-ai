@@ -1,0 +1,111 @@
+{
+  "type": "FeatureCollection",
+  "name": "NELAYA-AI FGI Physics Support Preview",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          95.70833333333333,
+          3.958333333333333
+        ]
+      },
+      "properties": {
+        "fgi_physics_support_confidence_adjusted": 0.30395329684772726,
+        "front_score": 0.38923339810451035,
+        "dynamic_physics_score": 0.3654513461617763,
+        "shelf_break_score": 0.5389551918302581,
+        "species_bathy_support": 0.5406023182148636,
+        "operational_score": 0.901176479108197,
+        "current_speed_ms": 0.16677833876803735,
+        "depth_m": 204.6875,
+        "label": "FGI v0.6 physics-informed support candidate"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          95.70833333333333,
+          3.0416666666666656
+        ]
+      },
+      "properties": {
+        "fgi_physics_support_confidence_adjusted": 0.2685386049394186,
+        "front_score": 0.2639688285847722,
+        "dynamic_physics_score": 0.3808457962488037,
+        "shelf_break_score": 0.4319672637607694,
+        "species_bathy_support": 0.4809766636908215,
+        "operational_score": 0.9444117722594727,
+        "current_speed_ms": 0.2098131532438762,
+        "depth_m": 233.2825,
+        "label": "FGI v0.6 physics-informed support candidate"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          95.45833333333333,
+          2.8749999999999987
+        ]
+      },
+      "properties": {
+        "fgi_physics_support_confidence_adjusted": 0.25090492023133254,
+        "front_score": 0.05866335613747081,
+        "dynamic_physics_score": 0.24105239831262185,
+        "shelf_break_score": 0.5482181639285126,
+        "species_bathy_support": 0.5276500842155232,
+        "operational_score": 0.7529411883038657,
+        "current_speed_ms": 0.24971133811934834,
+        "depth_m": 170.8886075949367,
+        "label": "FGI v0.6 physics-informed support candidate"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          95.70833333333333,
+          3.1249999999999987
+        ]
+      },
+      "properties": {
+        "fgi_physics_support_confidence_adjusted": 0.24875122490294072,
+        "front_score": 0.2154280957572371,
+        "dynamic_physics_score": 0.40150800055649316,
+        "shelf_break_score": 0.356738968498096,
+        "species_bathy_support": 0.4409478912608873,
+        "operational_score": 0.9373529488878335,
+        "current_speed_ms": 0.17656790238071418,
+        "depth_m": 272.9975,
+        "label": "FGI v0.6 physics-informed support candidate"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          93.79166666666666,
+          6.374999999999998
+        ]
+      },
+      "properties": {
+        "fgi_physics_support_confidence_adjusted": 0.2472917478088233,
+        "front_score": 0.40344324180082847,
+        "dynamic_physics_score": 0.5050983478675055,
+        "shelf_break_score": 0.268181091647369,
+        "species_bathy_support": 0.3995359754559412,
+        "operational_score": 0.7485294236965915,
+        "current_speed_ms": 0.1384478010065917,
+        "depth_m": 402.5425,
+        "label": "FGI v0.6 physics-informed support candidate"
+      }
+    }
+  ]
+}

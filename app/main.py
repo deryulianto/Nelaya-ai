@@ -69,6 +69,14 @@ mount("app.routers.fgi_zones", prefix="/api/v1")
 mount("app.routers.fgi_decision", prefix="")
 mount("app.routers.fgi_decision", prefix="/api/v1")
 
+# ✅ NEW: Pelagic Movement Intelligence
+mount("app.routers.fgi_pelagic_movement", prefix="")
+mount("app.routers.fgi_pelagic_movement", prefix="/api/v1")
+
+# ✅ NEW: FGI Physics-informed Support
+mount("app.routers.fgi_physics_support", prefix="")
+mount("app.routers.fgi_physics_support", prefix="/api/v1")
+
 mount("app.routers.signals", prefix="")
 mount("app.routers.earth", prefix="")
 mount("app.routers.waves", prefix="")
