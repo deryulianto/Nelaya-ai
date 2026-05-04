@@ -654,7 +654,7 @@ def main() -> None:
 
     summary = {
         "module": "nelaya_ai_physics_informed_fgi_support",
-        "version": "0.6",
+        "version": "0.6.2",
         "status": "ready",
         "region": "Aceh-Simeulue",
         "species_group": args.species_group,
