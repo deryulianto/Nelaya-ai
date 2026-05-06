@@ -77,6 +77,10 @@ mount("app.routers.fgi_pelagic_movement", prefix="/api/v1")
 mount("app.routers.fgi_physics_support", prefix="")
 mount("app.routers.fgi_physics_support", prefix="/api/v1")
 
+# ✅ NEW: Daily Current Analysis Dashboard
+mount("app.routers.current_analysis", prefix="")
+mount("app.routers.current_analysis", prefix="/api/v1")
+
 mount("app.routers.signals", prefix="")
 mount("app.routers.earth", prefix="")
 mount("app.routers.waves", prefix="")
