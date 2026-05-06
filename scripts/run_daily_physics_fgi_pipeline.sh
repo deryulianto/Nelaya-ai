@@ -194,6 +194,33 @@ PY
   cat "$FGI_JSON" | jq '.outputs.geojson' || true
 
   # ---------------------------------------------------------------------------
+  # 4b. Archive daily output for temporal memory
+  # ---------------------------------------------------------------------------
+  run_step "Archive daily physics outputs" \
+    python scripts/archive_daily_physics_outputs.py --overwrite
+
+  json_check "$PHYSICS_DIR/history/index.json" "physics history index"
+
+  log "History index:"
+  cat "$PHYSICS_DIR/history/index.json" | jq '.count, .entries[-1]' || true
+
+  # ---------------------------------------------------------------------------
+  # 4c. Build FGI Temporal Memory v0.7-alpha
+  # ---------------------------------------------------------------------------
+  run_step "Build FGI temporal memory v0.7-alpha" \
+    python scripts/build_fgi_temporal_memory.py \
+      --window-days 5 \
+      --active-threshold "$FGI_PHYSICS_THRESHOLD" \
+      --geojson-threshold 0.25
+
+  json_check "$PHYSICS_DIR/fgi_temporal_memory_today.json" "FGI temporal memory summary"
+  json_check "$PHYSICS_DIR/fgi_temporal_memory_preview.geojson" "FGI temporal memory GeoJSON"
+
+  log "Temporal memory summary:"
+  cat "$PHYSICS_DIR/fgi_temporal_memory_today.json" | jq '.summary_metrics, .movement_consistency, .outputs.geojson' || true
+
+
+  # ---------------------------------------------------------------------------
   # 5. API health check when backend is running locally
   # ---------------------------------------------------------------------------
   if curl -s --max-time 3 "http://127.0.0.1:8001/health" >/dev/null 2>&1; then
