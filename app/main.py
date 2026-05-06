@@ -81,6 +81,9 @@ mount("app.routers.fgi_physics_support", prefix="/api/v1")
 mount("app.routers.current_analysis", prefix="")
 mount("app.routers.current_analysis", prefix="/api/v1")
 
+# ✅ NEW: Tuna Depth Current Layer v0.7.3
+mount("app.routers.tuna_depth_current", prefix="")
+
 mount("app.routers.signals", prefix="")
 mount("app.routers.earth", prefix="")
 mount("app.routers.waves", prefix="")
