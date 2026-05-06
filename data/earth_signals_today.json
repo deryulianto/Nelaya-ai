@@ -1,0 +1,209 @@
+{
+  "ok": true,
+  "region": {
+    "name": "Aceh, Indonesia",
+    "bbox": {
+      "min_lon": 92.0,
+      "max_lon": 99.0,
+      "min_lat": 1.0,
+      "max_lat": 7.0
+    }
+  },
+  "date_utc": "2026-05-05",
+  "generated_at": "2026-05-06T00:54:07.300284+00:00",
+  "inputs": {
+    "sst_nrt": {
+      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/sst_nrt/2026/05/sst_nrt_aceh_2026-05-05.nc",
+      "day": "2026-05-05"
+    },
+    "chl_nrt": {
+      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/chl_nrt/2026/05/chl_nrt_aceh_2026-05-05.nc",
+      "day": "2026-05-05"
+    },
+    "ssh_anfc": {
+      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/ssh_anfc/2026/05/ssh_aceh_2026-05-05.nc",
+      "day": "2026-05-05"
+    },
+    "sal_anfc": {
+      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/sal_anfc/2026/05/sal_aceh_2026-05-05.nc",
+      "day": "2026-05-05"
+    },
+    "wave_anfc": {
+      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/wave_anfc/2026/05/wave_aceh_2026-05-05.nc",
+      "day": "2026-05-05"
+    },
+    "wind_nrt": {
+      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/wind_nrt/2026/05/wind_nrt_aceh_2026-05-04.nc",
+      "day": "2026-05-04"
+    },
+    "current": {
+      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/cur_nrt/2026/05/current_nrt_aceh_2026-05-01.nc",
+      "day": null,
+      "cache": "/home/coastalai/NELAYA-AI-LAB/data/earth/current_today.json",
+      "note": "Current loaded from JSON cache to avoid NetCDF/HDF5 segfault in main build."
+    }
+  },
+  "metrics": {
+    "sst": {
+      "value": 31.060604095458984,
+      "unit": "°C",
+      "source_kind": "sst_nrt",
+      "source_date": "2026-05-05",
+      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/sst_nrt/2026/05/sst_nrt_aceh_2026-05-05.nc"
+    },
+    "chl": {
+      "value": 0.2624317407608032,
+      "unit": "mg/m³",
+      "source_kind": "chl_nrt",
+      "source_date": "2026-05-05",
+      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/chl_nrt/2026/05/chl_nrt_aceh_2026-05-05.nc"
+    },
+    "ssh": {
+      "value": 50.664222240448,
+      "unit": "cm",
+      "source_kind": "ssh_anfc",
+      "source_date": "2026-05-05",
+      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/ssh_anfc/2026/05/ssh_aceh_2026-05-05.nc"
+    },
+    "sal": {
+      "value": 33.18544006347656,
+      "unit": "psu",
+      "source_kind": "sal_anfc",
+      "source_date": "2026-05-05",
+      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/sal_anfc/2026/05/sal_aceh_2026-05-05.nc"
+    },
+    "wave": {
+      "value": 1.014399114750447,
+      "unit": "m",
+      "source_kind": "wave_anfc",
+      "source_date": "2026-05-05",
+      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/wave_anfc/2026/05/wave_aceh_2026-05-05.nc"
+    },
+    "wind": {
+      "value": 4.057216651528397,
+      "unit": "m/s",
+      "source_kind": "wind_nrt",
+      "source_date": "2026-05-04",
+      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/wind_nrt/2026/05/wind_nrt_aceh_2026-05-04.nc"
+    },
+    "current": {
+      "value": 0.21702463383131512,
+      "unit": "m/s",
+      "source_kind": "current_nrt_cache_v1",
+      "source_date": null,
+      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/cur_nrt/2026/05/current_nrt_aceh_2026-05-01.nc",
+      "note": "Ocean current speed from cached NRT u/v vector. Safe layer; not yet modifying FGI.",
+      "components": {
+        "u_ms": -0.046436773281312245,
+        "v_ms": 0.04532792438687615
+      }
+    },
+    "fgi": {
+      "value": 0.610068989998111,
+      "unit": "index",
+      "source_kind": "fgi_realtime_v1",
+      "source_date": "2026-05-05",
+      "source_path": null,
+      "band": "medium",
+      "note": "FGI realtime v1 from current SST, CHL, SAL",
+      "inputs": {
+        "sst_c": 31.060604095458984,
+        "chl_mg_m3": 0.2624317407608032,
+        "sal_psu": 33.18544006347656
+      }
+    },
+    "fgi_current_aware": {
+      "value": 0.6466731293979977,
+      "unit": "index",
+      "source_kind": "fgi_current_aware_v1",
+      "source_date": "2026-05-06",
+      "source_path": null,
+      "note": "FGI adjusted with ocean current (experimental shadow model)",
+      "inputs": {
+        "fgi_base": 0.610068989998111,
+        "current_ms": 0.21702463383131512
+      }
+    },
+    "osi": {
+      "value": 0.6660787117968132,
+      "unit": "index",
+      "source_kind": "osi_realtime_v1",
+      "source_date": "2026-05-05",
+      "source_path": null,
+      "band": "high",
+      "note": "OSI realtime v1 from current SST, CHL, SSH, wave",
+      "inputs": {
+        "sst_c": 31.060604095458984,
+        "chl_mg_m3": 0.2624317407608032,
+        "ssh_cm": 50.664222240448,
+        "wave_m": 1.014399114750447
+      }
+    },
+    "msi": {
+      "value": 0.5244587920698628,
+      "unit": "index",
+      "source_kind": "msi_realtime_v1",
+      "source_date": "2026-05-05",
+      "source_path": null,
+      "band": "medium",
+      "note": "MSI realtime v1 from FGI, OSI, wave, and thermal penalty",
+      "inputs": {
+        "fgi": 0.610068989998111,
+        "osi": 0.6660787117968132,
+        "wave_m": 1.014399114750447,
+        "sst_c": 31.060604095458984
+      }
+    },
+    "current_ms": 0.23170842642885162,
+    "current_u_ms": -0.1669253016453119,
+    "current_v_ms": -0.16070077332967683,
+    "current_direction_deg": 226.08842466443318,
+    "current_direction_label": "barat_daya",
+    "current_source_date": "2026-05-06",
+    "current_source_file": "data/raw/aceh_simeulue/cur_nrt/2026/05/current_nrt_aceh_2026-05-06.nc",
+    "current_source": "ocean_dynamic_physics_today",
+    "current_note": "Synced from data/physics/ocean_dynamic_physics_today.json to keep dashboard current metrics consistent with FGI Physics Support.",
+    "current_speed_ms": 0.23170842642885162,
+    "current_bearing_deg": 226.08842466443318,
+    "current_bearing_label": "barat_daya"
+  },
+  "quick_compare": {
+    "selat_malaka": {
+      "point": {
+        "lat": 5.3,
+        "lon": 97.2
+      },
+      "metrics": {
+        "sst_c": 30.7327938079834,
+        "chl": 0.3281944990158081,
+        "hs_m": 0.12999999709427357,
+        "ssh_cm": 51.134300231933594,
+        "wind_ms": 4.07235803926914
+      }
+    },
+    "samudra_hindia": {
+      "point": {
+        "lat": 4.6,
+        "lon": 94.8
+      },
+      "metrics": {
+        "sst_c": 30.972885131835938,
+        "chl": 0.07828063517808914,
+        "hs_m": 1.1899999734014273,
+        "ssh_cm": 46.30752503871918,
+        "wind_ms": 2.092124000581065
+      }
+    }
+  },
+  "current_ms": 0.21702463383131512,
+  "current_u_ms": -0.046436773281312245,
+  "current_v_ms": 0.04532792438687615,
+  "sst_c": 31.060604095458984,
+  "chl_mg_m3": 0.2624317407608032,
+  "wind_ms": 4.057216651528397,
+  "wave_m": 1.014399114750447,
+  "ssh_cm": 50.664222240448,
+  "sal_psu": 33.18544006347656,
+  "fgi": 0.610068989998111,
+  "fgi_current_aware": 0.6466731293979977
+}

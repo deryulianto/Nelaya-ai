@@ -1,0 +1,3156 @@
+{
+  "type": "FeatureCollection",
+  "name": "NELAYA-AI FGI Temporal Memory Preview",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.20833333333333,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.41039925265006466,
+        "today_physics_support_score": 0.2714477318143623,
+        "weighted_physics_support_score": 0.2696936409082165,
+        "persistence_score": 1.0,
+        "stability_score": 0.9917471787958135,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.20833333333333,
+          5.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.40788236323627153,
+        "today_physics_support_score": 0.2636683325850619,
+        "weighted_physics_support_score": 0.26151749330968976,
+        "persistence_score": 1.0,
+        "stability_score": 0.9896075332995394,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.20833333333333,
+          5.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.40758868316750985,
+        "today_physics_support_score": 0.2588551159512349,
+        "weighted_physics_support_score": 0.2615269620991231,
+        "persistence_score": 1.0,
+        "stability_score": 0.9871900138630529,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.54166666666666,
+          6.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.40470078108342034,
+        "today_physics_support_score": 0.24763178765122515,
+        "weighted_physics_support_score": 0.2469326511255744,
+        "persistence_score": 1.0,
+        "stability_score": 0.9964640438073757,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.54166666666666,
+          5.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.4031583469334654,
+        "today_physics_support_score": 0.24986098690253736,
+        "weighted_physics_support_score": 0.25880889795099987,
+        "persistence_score": 1.0,
+        "stability_score": 0.9571573534146358,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.45833333333333,
+          6.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.39983847775643616,
+        "today_physics_support_score": 0.23267740805750703,
+        "weighted_physics_support_score": 0.23644888864299757,
+        "persistence_score": 1.0,
+        "stability_score": 0.9803796689314881,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.70833333333333,
+          6.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.39684270137096345,
+        "today_physics_support_score": 0.22106592379899,
+        "weighted_physics_support_score": 0.22402470049837941,
+        "persistence_score": 1.0,
+        "stability_score": 0.9838907470751496,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.45833333333333,
+          5.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3656160844762016,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.374633492645884,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.54166666666666,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.35846928863117833,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.34341932490905974,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.45833333333333,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3561832021911106,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.3334346706460106,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.04166666666666,
+          6.208333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3542707296403348,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.32508180311117585,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.54166666666666,
+          5.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.354172208722303,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.32465150560055506,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.625,
+          5.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3529465724721755,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.3192984472055188,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.625,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.35283377114486725,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.3188057789346055,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.54166666666666,
+          5.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.352657188657235,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.3180345416545905,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.54166666666666,
+          5.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.35221931411889995,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.3161220917142731,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.95833333333333,
+          6.208333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.35117367329634924,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.3115551768708478,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.79166666666666,
+          6.124999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3510092829418896,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.3108371896483651,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.125,
+          6.208333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3508818151494955,
+        "today_physics_support_score": 0.310280464489411,
+        "weighted_physics_support_score": 0.310280464489411,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.70833333333333,
+          6.041666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.35007937095047187,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.3067757291687277,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.875,
+          6.291666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3498601526525298,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.30581827678428475,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.29166666666666,
+          6.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34811145158477225,
+        "today_physics_support_score": 0.2981806935044212,
+        "weighted_physics_support_score": 0.2981806935044212,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.875,
+          6.208333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3479893610889856,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2976474540923551,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.125,
+          6.124999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34761003494858267,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.29599071867829646,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.70833333333333,
+          6.124999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3472482325579592,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.29441051955782355,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.79166666666666,
+          6.208333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34702002297554524,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2934137970630033,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.29166666666666,
+          6.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3469056478139337,
+        "today_physics_support_score": 0.29291425495254075,
+        "weighted_physics_support_score": 0.29291425495254075,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.625,
+          5.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3466918322029552,
+        "today_physics_support_score": 0.2919803992092733,
+        "weighted_physics_support_score": 0.2919803992092733,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.70833333333333,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3465977998802952,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2915697059761324,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.45833333333333,
+          5.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34644047499567077,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.290882577723929,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.875,
+          5.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34638966663707643,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.29066066840092797,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.625,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34635076414236776,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2904907588328432,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.625,
+          5.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.346301587700454,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.29027597702853775,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.20833333333333,
+          6.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34586825696516416,
+        "today_physics_support_score": 0.28838337248936136,
+        "weighted_physics_support_score": 0.2883833724893614,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.125,
+          5.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3453654389438521,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2861872770084386,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.79166666666666,
+          6.041666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3451926276276729,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.28543251060304387,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.70833333333333,
+          5.958333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34513505508959286,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.28518105821799833,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.625,
+          5.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34508142171818945,
+        "today_physics_support_score": 0.284946810439332,
+        "weighted_physics_support_score": 0.284946810439332,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.95833333333333,
+          5.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3445060108857886,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.28243366040264095,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.875,
+          6.124999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3444912158143707,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2823690418167835,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.20833333333333,
+          5.958333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34405550942185,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.28046606141618613,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.70833333333333,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3439994057071083,
+        "today_physics_support_score": 0.2802210242274123,
+        "weighted_physics_support_score": 0.2802210242274123,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.95833333333333,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3438202216176638,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.27943842425604415,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.625,
+          5.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3436951182592513,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.27889202594012663,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.79166666666666,
+          6.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34361976799522836,
+        "today_physics_support_score": 0.2785629280015215,
+        "weighted_physics_support_score": 0.2785629280015215,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.20833333333333,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3435523410367566,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2782684356951287,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.79166666666666,
+          6.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34349961749863994,
+        "today_physics_support_score": 0.27803816168169104,
+        "weighted_physics_support_score": 0.27803816168169104,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.95833333333333,
+          6.291666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34328982013388964,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2771218559306853,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.04166666666666,
+          5.958333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34317480865854455,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2766195346721899,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.375,
+          6.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3429812196756472,
+        "today_physics_support_score": 0.27577402024653735,
+        "weighted_physics_support_score": 0.27577402024653735,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.95833333333333,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34295191855248935,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.27564604538997795,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.79166666666666,
+          5.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3429093623337689,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2754601779077959,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.70833333333333,
+          5.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3426751679077986,
+        "today_physics_support_score": 0.27443731615914846,
+        "weighted_physics_support_score": 0.27443731615914846,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.29166666666666,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34253238303802325,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2738136925140779,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.375,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34232074455945316,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.27288934556015526,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.04166666666666,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3422812781157225,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.27271697290235225,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.45833333333333,
+          5.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.342048019614921,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2716981988771882,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.125,
+          5.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3419170321423601,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2711261012506993,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.29166666666666,
+          5.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3417685397473271,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.27047754956030373,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.875,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34176473954501696,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.27046095189123404,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.125,
+          6.041666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3416813726251305,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2700968406059159,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.125,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3415968581421667,
+        "today_physics_support_score": 0.26972771725265,
+        "weighted_physics_support_score": 0.26972771725265,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.54166666666666,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34147006090544657,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.26917392079597585,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.95833333333333,
+          6.124999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3412201186631774,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2680822792766313,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.79166666666666,
+          5.958333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3411642711525367,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.26783836107851483,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.04166666666666,
+          6.374999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34109198358569337,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.26752263969991846,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.625,
+          6.208333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34099605075495515,
+        "today_physics_support_score": 0.2671036458549755,
+        "weighted_physics_support_score": 0.2671036458549755,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.29166666666666,
+          6.208333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3409913066560882,
+        "today_physics_support_score": 0.2670829256467866,
+        "weighted_physics_support_score": 0.2670829256467866,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.375,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34091377696299163,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2667443088879792,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.70833333333333,
+          5.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34058176361343256,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2652942156421761,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.29166666666666,
+          5.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3405052168413285,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.26495989186464247,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.95833333333333,
+          6.041666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3403111590472361,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.26411232987087785,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.875,
+          6.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.34020599651971156,
+        "today_physics_support_score": 0.2636530246318641,
+        "weighted_physics_support_score": 0.2636530246318641,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.45833333333333,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3398435082957755,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2620698300828771,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.70833333333333,
+          5.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3395300911126384,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2607009569909086,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.125,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3393991929122485,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.26012924926733305,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.29166666666666,
+          5.958333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3392826520758265,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.25962024840944486,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.375,
+          6.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3392816612301266,
+        "today_physics_support_score": 0.25961592081641616,
+        "weighted_physics_support_score": 0.25961592081641616,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.95833333333333,
+          5.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.339083882465142,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.25875210720275155,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.54166666666666,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3389570811201381,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2581982928028396,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.79166666666666,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33883784787357457,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2576775326413984,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.70833333333333,
+          6.208333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33873056230883786,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2572089548778734,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.625,
+          5.958333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33871023851736753,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.25712018919185675,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.875,
+          5.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3386120635478583,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2566914026373966,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.45833333333333,
+          6.374999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33854644731246464,
+        "today_physics_support_score": 0.25640481880007265,
+        "weighted_physics_support_score": 0.25640481880007265,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.875,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33832790228514653,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2554503069756576,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.70833333333333,
+          5.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3382822621129229,
+        "today_physics_support_score": 0.2552509700948764,
+        "weighted_physics_support_score": 0.2552509700948764,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.625,
+          6.291666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3380479961539324,
+        "today_physics_support_score": 0.2542277959203897,
+        "weighted_physics_support_score": 0.2542277959203897,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.20833333333333,
+          6.208333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33801221188202535,
+        "today_physics_support_score": 0.2540715054246392,
+        "weighted_physics_support_score": 0.2540715054246392,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.875,
+          6.041666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3378505240769825,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2533653217897562,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.375,
+          5.458333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3377406891979049,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.25288560970433666,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.375,
+          5.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3377392679463345,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2528794022813353,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.625,
+          6.374999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3373683997446485,
+        "today_physics_support_score": 0.25125960755000215,
+        "weighted_physics_support_score": 0.25125960755000215,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.29166666666666,
+          6.124999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33709372846055247,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2500599600827766,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.79166666666666,
+          5.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33701146709331514,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.24970067738170496,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.45833333333333,
+          5.958333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33699698847536946,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.24963744093016013,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.29166666666666,
+          6.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3369674601393298,
+        "today_physics_support_score": 0.24950847370427084,
+        "weighted_physics_support_score": 0.24950847370427084,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.875,
+          5.958333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3366645310678442,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.24818540822783147,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.70833333333333,
+          6.208333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3362804595070878,
+        "today_physics_support_score": 0.24650794683389154,
+        "weighted_physics_support_score": 0.24650794683389152,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.79166666666666,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33622048077513284,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2462459852163383,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.45833333333333,
+          6.041666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33613576370236425,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.24587597703688105,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.45833333333333,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3360188534672713,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.24536536280254767,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.70833333333333,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33599439776595985,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.24525855068990182,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.625,
+          6.041666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3358792291732767,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.24475554320962944,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.04166666666666,
+          5.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33586732514078216,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2447035514534511,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.79166666666666,
+          6.041666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33578448293740604,
+        "today_physics_support_score": 0.24434173190690966,
+        "weighted_physics_support_score": 0.24434173190690966,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.54166666666666,
+          6.291666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3356258030522281,
+        "today_physics_support_score": 0.24364868558799843,
+        "weighted_physics_support_score": 0.24364868558799843,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.625,
+          6.458333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3355692310612775,
+        "today_physics_support_score": 0.24340160316770434,
+        "weighted_physics_support_score": 0.24340160316770434,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.54166666666666,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3354961365961464,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.24308235760022018,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.29166666666666,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3354337992774075,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2428100946777059,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.79166666666666,
+          6.291666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33537255114559406,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2425425888609105,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.79166666666666,
+          5.958333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3348439493548935,
+        "today_physics_support_score": 0.24023388083024774,
+        "weighted_physics_support_score": 0.24023388083024774,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.95833333333333,
+          5.958333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3347374791348885,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.23976886414608897,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.45833333333333,
+          6.124999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33450069553088446,
+        "today_physics_support_score": 0.23873469396787428,
+        "weighted_physics_support_score": 0.23873469396787428,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.20833333333333,
+          6.124999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3344759761003272,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.23862672999793524,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          95.29166666666666,
+          3.0416666666666656
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3344237977251955,
+        "today_physics_support_score": 0.23839883702478834,
+        "weighted_physics_support_score": 0.23839883702478834,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.375,
+          6.291666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33433384677048084,
+        "today_physics_support_score": 0.2380059694727504,
+        "weighted_physics_support_score": 0.2380059694727504,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.70833333333333,
+          5.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33413219980907527,
+        "today_physics_support_score": 0.23712526122062963,
+        "weighted_physics_support_score": 0.23712526122062963,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.375,
+          5.958333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33388553767330637,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.23604794581283392,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.79166666666666,
+          6.124999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33378194303082986,
+        "today_physics_support_score": 0.23559548842955058,
+        "weighted_physics_support_score": 0.23559548842955058,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          95.375,
+          3.0416666666666656
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33371422987864435,
+        "today_physics_support_score": 0.2352997461506132,
+        "weighted_physics_support_score": 0.23529974615061322,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.625,
+          6.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33346398203934147,
+        "today_physics_support_score": 0.23420676991326658,
+        "weighted_physics_support_score": 0.23420676991326658,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.70833333333333,
+          6.374999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33306131552238893,
+        "today_physics_support_score": 0.23244809365124458,
+        "weighted_physics_support_score": 0.23244809365124455,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.125,
+          6.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33293601322788025,
+        "today_physics_support_score": 0.23190082646698215,
+        "weighted_physics_support_score": 0.23190082646698215,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.70833333333333,
+          5.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33287855565449265,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.23164987619886734,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.70833333333333,
+          5.458333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3328153169190727,
+        "today_physics_support_score": 0.23137367627128208,
+        "weighted_physics_support_score": 0.23137367627128208,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.45833333333333,
+          5.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3327976148683545,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.23129636123495162,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.375,
+          6.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3327110500274543,
+        "today_physics_support_score": 0.23091828278937077,
+        "weighted_physics_support_score": 0.23091828278937077,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.625,
+          6.124999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3326082062560196,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.23046910489176994,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.54166666666666,
+          6.041666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33249224902457364,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.229962652972457,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.70833333333333,
+          5.041666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33247449092172493,
+        "today_physics_support_score": 0.2298850931242355,
+        "weighted_physics_support_score": 0.2298850931242355,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.79166666666666,
+          5.624999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33192357764910496,
+        "today_physics_support_score": 0.22747893802019983,
+        "weighted_physics_support_score": 0.22747893802019983,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.875,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33187769683488516,
+        "today_physics_support_score": 0.22727855011742337,
+        "weighted_physics_support_score": 0.22727855011742337,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.79166666666666,
+          5.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33185377886586476,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2271740865909539,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.45833333333333,
+          6.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3316193143773544,
+        "today_physics_support_score": 0.226150045323875,
+        "weighted_physics_support_score": 0.226150045323875,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.79166666666666,
+          5.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3312852338996301,
+        "today_physics_support_score": 0.22469092374052285,
+        "weighted_physics_support_score": 0.22469092374052285,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.79166666666666,
+          5.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.3310430592379205,
+        "today_physics_support_score": 0.2236332077127905,
+        "weighted_physics_support_score": 0.22363320771279052,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.875,
+          5.958333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.330564114357259,
+        "today_physics_support_score": 0.2215413799670641,
+        "weighted_physics_support_score": 0.2215413799670641,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.79166666666666,
+          6.374999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.33029537844944756,
+        "today_physics_support_score": 0.22036765570164038,
+        "weighted_physics_support_score": 0.2203676557016404,
+        "persistence_score": 1.0,
+        "stability_score": 1.0,
+        "temporal_confidence": 0.43999999999999995,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.95833333333333,
+          6.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.28825507449504073,
+        "today_physics_support_score": 0.2471450682067629,
+        "weighted_physics_support_score": 0.23670478520491775,
+        "persistence_score": 0.5,
+        "stability_score": 0.9443649063881582,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.125,
+          6.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.287943323663901,
+        "today_physics_support_score": 0.27076129118221887,
+        "weighted_physics_support_score": 0.25245564101716983,
+        "persistence_score": 0.5,
+        "stability_score": 0.9063818219403255,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.70833333333333,
+          6.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.28468520744420805,
+        "today_physics_support_score": 0.20700542223028454,
+        "weighted_physics_support_score": 0.21226193679375438,
+        "persistence_score": 0.5,
+        "stability_score": 0.9702338100029565,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.625,
+          6.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.28402550329293774,
+        "today_physics_support_score": 0.20574834584050933,
+        "weighted_physics_support_score": 0.21174796337809731,
+        "persistence_score": 0.5,
+        "stability_score": 0.9660075466040606,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.625,
+          6.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.28262419440320286,
+        "today_physics_support_score": 0.215095052930886,
+        "weighted_physics_support_score": 0.23352055248375916,
+        "persistence_score": 0.5,
+        "stability_score": 0.9055855650316699,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.54166666666666,
+          6.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.28177577937213705,
+        "today_physics_support_score": 0.20206480275406644,
+        "weighted_physics_support_score": 0.21105721608679806,
+        "persistence_score": 0.5,
+        "stability_score": 0.9492056255225326,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.875,
+          6.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.2782304722888193,
+        "today_physics_support_score": 0.19631761624754152,
+        "weighted_physics_support_score": 0.21014641386133584,
+        "persistence_score": 0.5,
+        "stability_score": 0.922327816599358,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.875,
+          6.541666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.27763404632935734,
+        "today_physics_support_score": 0.1937295676954738,
+        "weighted_physics_support_score": 0.20698493276658086,
+        "persistence_score": 0.5,
+        "stability_score": 0.9245747492627694,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.875,
+          6.791666666666666
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.27676608728883195,
+        "today_physics_support_score": 0.2733469201922199,
+        "weighted_physics_support_score": 0.24303557523017136,
+        "persistence_score": 0.5,
+        "stability_score": 0.8363788924882501,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.79166666666666,
+          6.708333333333333
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.27660956632364636,
+        "today_physics_support_score": 0.18993659759042594,
+        "weighted_physics_support_score": 0.2027794857510388,
+        "persistence_score": 0.5,
+        "stability_score": 0.9256779971682432,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.70833333333333,
+          6.874999999999998
+        ]
+      },
+      "properties": {
+        "score_var": "temporal_memory_confidence_adjusted",
+        "temporal_memory_confidence_adjusted": 0.2742800287963252,
+        "today_physics_support_score": 0.2437799039171521,
+        "weighted_physics_support_score": 0.22069255122293144,
+        "persistence_score": 0.5,
+        "stability_score": 0.8663662766897002,
+        "temporal_confidence": 0.6399999999999999,
+        "label": "FGI v0.7 temporal memory candidate",
+        "note": "GeoJSON uses confidence-adjusted temporal memory when available."
+      }
+    }
+  ]
+}
