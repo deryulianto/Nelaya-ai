@@ -22,8 +22,8 @@
       "created": true,
       "file": "data/physics/fgi_physics_support_preview.geojson",
       "score_var": "fgi_physics_support_confidence_adjusted",
-      "threshold": 0.22,
-      "point_count": 57
+      "threshold": 0.55,
+      "point_count": 0
     }
   },
   "grid": {
