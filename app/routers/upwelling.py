@@ -11,6 +11,7 @@ UPWELLING_GEOJSON_FILE = BASE_DIR / "data" / "upwelling" / "upwelling_candidates
 UPWELLING_BUFFER_GEOJSON_FILE = BASE_DIR / "data" / "upwelling" / "upwelling_candidate_buffers_today.geojson"
 UPWELLING_CLUSTER_JSON_FILE = BASE_DIR / "data" / "upwelling" / "upwelling_candidate_clusters_today.json"
 UPWELLING_CLUSTER_GEOJSON_FILE = BASE_DIR / "data" / "upwelling" / "upwelling_candidate_clusters_today.geojson"
+UPWELLING_TEMPORAL_MEMORY_FILE = BASE_DIR / "data" / "upwelling" / "upwelling_temporal_memory_today.json"
 
 
 def read_json_file(path: Path, label: str):
@@ -68,4 +69,11 @@ def get_upwelling_candidate_clusters_geojson():
     return read_json_file(
         UPWELLING_CLUSTER_GEOJSON_FILE,
         "GeoJSON cluster kandidat upwelling",
+    )
+
+@router.get("/candidates/temporal-memory")
+def get_upwelling_temporal_memory():
+    return read_json_file(
+        UPWELLING_TEMPORAL_MEMORY_FILE,
+        "Temporal memory kandidat upwelling",
     )
