@@ -59,6 +59,9 @@ mount("app.routers.me", prefix="")
 mount("app.routers.fgi", prefix="")
 mount("app.routers.fgi", prefix="/api/v1")
 
+# ✅ NEW: FGI Feature Store v0.1
+mount("app.routers.fgi_feature_store", prefix="")
+
 # ✅ NEW: Behavior FGI
 mount("app.routers.fgi_behavior", prefix="")
 mount("app.routers.fgi_behavior", prefix="/api/v1")
@@ -68,6 +71,10 @@ mount("app.routers.fgi_zones", prefix="/api/v1")
 
 mount("app.routers.fgi_decision", prefix="")
 mount("app.routers.fgi_decision", prefix="/api/v1")
+
+# ✅ NEW: Upwelling Watch / UPI
+mount("app.routers.upwelling", prefix="")
+mount("app.routers.upwelling", prefix="/api/v1")
 
 # ✅ NEW: Pelagic Movement Intelligence
 mount("app.routers.fgi_pelagic_movement", prefix="")
@@ -81,8 +88,14 @@ mount("app.routers.fgi_physics_support", prefix="/api/v1")
 mount("app.routers.current_analysis", prefix="")
 mount("app.routers.current_analysis", prefix="/api/v1")
 
+# ✅ NEW: Integrated Ocean Decision Intelligence v0.9-alpha
+mount("app.routers.ocean_decision", prefix="")
+
 # ✅ NEW: Tuna Depth Current Layer v0.7.3
 mount("app.routers.tuna_depth_current", prefix="")
+
+# ✅ NEW: NS-informed Ocean Diagnostics v0.8-alpha
+mount("app.routers.ns_ocean_diagnostics", prefix="")
 
 mount("app.routers.signals", prefix="")
 mount("app.routers.earth", prefix="")
