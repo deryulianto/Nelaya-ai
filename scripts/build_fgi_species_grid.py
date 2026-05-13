@@ -311,6 +311,88 @@ def dominant_group(small: Optional[float], medium: Optional[float]) -> tuple[str
     return "medium_pelagic", "Pelagis sedang lebih terbaca"
 
 
+
+def daily_priority_score(
+    final_score: Optional[float],
+    raw_score: Optional[float],
+    fgi_dynamic: Optional[float],
+    confidence: Optional[float],
+) -> Optional[float]:
+    """
+    v0.5.3
+    Skor khusus untuk ranking relatif harian.
+
+    final_score tetap konservatif untuk label habitat.
+    raw_score membantu membedakan titik yang sama-sama terkena cap.
+    fgi_dynamic tetap menjadi pagar utama agar ranking tidak terlalu optimis.
+    """
+    fs = clamp01(final_score)
+    rs = clamp01(raw_score)
+    fg = clamp01(fgi_dynamic)
+    cf = clamp01(confidence)
+
+    parts = []
+    weights = []
+
+    if fs is not None:
+        parts.append(fs)
+        weights.append(0.40)
+
+    if rs is not None:
+        parts.append(rs)
+        weights.append(0.25)
+
+    if fg is not None:
+        parts.append(fg)
+        weights.append(0.25)
+
+    if cf is not None:
+        parts.append(cf)
+        weights.append(0.10)
+
+    if not parts:
+        return None
+
+    total_w = sum(weights)
+    score = sum(v * w for v, w in zip(parts, weights)) / total_w
+    return round(score, 4)
+
+
+def relative_label_for_rank(
+    rank: int,
+    percentile: float,
+    habitat_score: Optional[float],
+    fgi_dynamic: Optional[float],
+) -> str:
+    """
+    Ranking harian harus tetap dibaca bersama FGI dynamic.
+    Jika FGI dynamic rendah, jangan sebut 'prioritas' tanpa catatan.
+    """
+    hs = clamp01(habitat_score)
+    fg = clamp01(fgi_dynamic)
+
+    if hs is None:
+        return "tidak_tersedia"
+
+    if hs < 0.45:
+        return "rendah"
+
+    if fg is not None and fg < 0.30:
+        if rank <= 10:
+            return "prioritas_observasi_hati_hati"
+        if percentile >= 0.75:
+            return "menarik_dipantau_hati_hati"
+        return "indikatif_hati_hati"
+
+    if rank <= 10:
+        return "prioritas_observasi_harian"
+    if percentile >= 0.75:
+        return "menarik_dipantau"
+    if percentile >= 0.50:
+        return "sedang_dipantau"
+    return "indikatif_rendah"
+
+
 def main() -> None:
     input_file = find_latest_grid_file()
     geo = read_json(input_file)
@@ -403,14 +485,26 @@ def main() -> None:
 
         new_props = {
             **props,
-            "species_grid_version": "0.5.1",
+            "species_grid_version": "0.5.3",
             "fgi_dynamic": fgi_dynamic,
             "fgi_baseline": fgi_baseline,
             "small_pelagic_score_raw": small_score_raw,
             "small_pelagic_score": small_score,
+            "small_pelagic_priority_score": daily_priority_score(
+                small_score,
+                small_score_raw,
+                fgi_dynamic,
+                conf,
+            ),
             "small_pelagic_label": label_score(small_score),
             "medium_pelagic_score_raw": medium_score_raw,
             "medium_pelagic_score": medium_score,
+            "medium_pelagic_priority_score": daily_priority_score(
+                medium_score,
+                medium_score_raw,
+                fgi_dynamic,
+                conf,
+            ),
             "medium_pelagic_label": label_score(medium_score),
             "dominant_group": dom,
             "dominant_label": dom_label,
@@ -430,10 +524,63 @@ def main() -> None:
 
         out_features.append(out_feat)
 
+    # ------------------------------------------------------------------
+    # v0.5.2: Relative daily ranking
+    # ------------------------------------------------------------------
+    # Skor absolut tetap dijaga konservatif oleh habitat consistency penalty.
+    # Ranking ini membantu peta menunjukkan zona relatif terbaik pada hari itu,
+    # tanpa mengklaim bahwa zona tersebut pasti kuat atau pasti ada ikan.
+    def add_relative_ranking(score_key: str, prefix: str) -> None:
+        priority_key = f"{prefix}_priority_score"
+
+        ranked = [
+            f for f in out_features
+            if to_float((f.get("properties") or {}).get(score_key)) is not None
+        ]
+
+        ranked.sort(
+            key=lambda f: (
+                to_float((f.get("properties") or {}).get(priority_key)) or -1,
+                to_float((f.get("properties") or {}).get(score_key)) or -1,
+                to_float((f.get("properties") or {}).get(f"{prefix}_score_raw")) or -1,
+                to_float((f.get("properties") or {}).get("fgi_dynamic")) or -1,
+            ),
+            reverse=True,
+        )
+
+        n = len(ranked)
+
+        for rank, feat in enumerate(ranked, start=1):
+            props = feat.get("properties") or {}
+            score = to_float(props.get(score_key))
+            priority = to_float(props.get(priority_key))
+            fgi_dynamic = to_float(props.get("fgi_dynamic"))
+
+            if n <= 1:
+                percentile = 1.0
+            else:
+                percentile = 1.0 - ((rank - 1) / (n - 1))
+
+            props[f"{prefix}_rank_today"] = rank
+            props[f"{prefix}_percentile_today"] = round(percentile, 4)
+            props[f"{prefix}_priority_score_today"] = priority
+            props[f"is_top_{prefix}_today"] = rank <= 10
+            props[f"{prefix}_relative_label"] = relative_label_for_rank(
+                rank=rank,
+                percentile=percentile,
+                habitat_score=score,
+                fgi_dynamic=fgi_dynamic,
+            )
+
+            feat["properties"] = props
+
+    add_relative_ranking("small_pelagic_score", "small_pelagic")
+    add_relative_ranking("medium_pelagic_score", "medium_pelagic")
+
     out_geo = {
         "type": "FeatureCollection",
         "module": "fgi_species_grid",
-        "version": "0.5.1",
+        "version": "0.5.3",
         "generated_at": now_jakarta(),
         "source_file": str(input_file.relative_to(ROOT)),
         "feature_count": len(out_features),
@@ -500,7 +647,7 @@ def main() -> None:
 
     summary = {
         "module": "fgi_species_grid_summary",
-        "version": "0.5.1",
+        "version": "0.5.3",
         "generated_at": out_geo["generated_at"],
         "source_file": out_geo["source_file"],
         "output_geojson": str(OUT_GEOJSON.relative_to(ROOT)),
