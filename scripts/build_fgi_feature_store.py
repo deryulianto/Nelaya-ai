@@ -662,7 +662,7 @@ def build_species_groups(metrics: Dict[str, Any], derived_features: Dict[str, An
     medium_drivers, medium_cautions = build_species_explanation(medium)
 
     return {
-        "version": "0.3",
+        "version": "0.4",
         "method": "weighted_expert_rules_v0",
         "scope": "ecological_group_not_single_species",
         "groups": {
@@ -689,6 +689,226 @@ def build_species_groups(metrics: Dict[str, Any], derived_features: Dict[str, An
             "FGI Species Group v0.3 adalah model interpretasi awal berbasis kelompok ekologis, bukan prediksi pasti spesies.",
             "Demersal dan reef/island fish belum diaktifkan karena membutuhkan data substrat, habitat dasar, terumbu, dan validasi lapangan lebih rinci.",
             "Skor ini harus dikalibrasi dengan data trip nelayan sebelum dipakai sebagai rekomendasi operasional yang kuat.",
+        ],
+    }
+
+
+
+def pct(value: Optional[float]) -> Optional[int]:
+    x = clamp01(value)
+    if x is None:
+        return None
+    return int(round(x * 100))
+
+
+def readable_label(label: str) -> str:
+    mapping = {
+        "kuat_mendukung": "kuat mendukung",
+        "cukup_mendukung": "cukup mendukung",
+        "sedang": "sedang",
+        "lemah": "lemah",
+        "tidak_mendukung": "tidak mendukung",
+        "tidak_tersedia": "tidak tersedia",
+    }
+    return mapping.get(label, str(label).replace("_", " "))
+
+
+def wave_operational_note(wave_m: Optional[float]) -> str:
+    if wave_m is None:
+        return "Data gelombang belum tersedia, sehingga catatan operasional perlu dibaca hati-hati."
+    if wave_m < 0.75:
+        return "Gelombang relatif tenang, tetapi keputusan melaut tetap harus mengikuti kondisi lokal dan pengalaman nelayan."
+    if wave_m < 1.50:
+        return "Gelombang masih relatif dapat dikelola, namun tetap perlu pemantauan sebelum operasi melaut."
+    if wave_m < 2.50:
+        return "Gelombang mulai menjadi faktor pembatas; rekomendasi habitat perlu dipisahkan dari kelayakan operasi."
+    return "Gelombang berisiko tinggi; aspek keselamatan harus lebih diprioritaskan daripada peluang habitat."
+
+
+def upwelling_note(upwelling_score: Optional[float]) -> str:
+    u = clamp01(upwelling_score)
+    if u is None:
+        return "Layer upwelling belum tersedia, sehingga produktivitas belum dapat dikaitkan dengan proses upwelling."
+    if u >= 0.70:
+        return "Upwelling cukup kuat dan dapat menjadi salah satu driver produktivitas utama hari ini."
+    if u >= 0.45:
+        return "Upwelling berada pada tingkat sedang; produktivitas mungkin mendapat dukungan dari proses pengayaan massa air."
+    if u >= 0.20:
+        return "Upwelling masih lemah; FGI lebih tepat dibaca dari kombinasi habitat, front, arus, dan memori temporal."
+    return "Upwelling sangat lemah; sinyal FGI hari ini tidak boleh dibaca sebagai kejadian upwelling kuat."
+
+
+def confidence_sentence(confidence: Dict[str, Any]) -> str:
+    level = confidence.get("level")
+    score = confidence.get("score")
+
+    if score is None:
+        return "Confidence belum dapat dihitung penuh karena sebagian data pendukung belum tersedia."
+
+    if level == "tinggi":
+        return f"Confidence tinggi ({score:.2f}) karena sebagian besar data pendukung tersedia dan dapat dibaca."
+    if level == "sedang":
+        return f"Confidence sedang ({score:.2f}); hasil dapat dibaca, tetapi masih perlu kehati-hatian."
+    return f"Confidence rendah ({score:.2f}); hasil masih bersifat indikatif dan membutuhkan dukungan data tambahan."
+
+
+def group_message(group_name: str, group: Dict[str, Any]) -> str:
+    score = group.get("score")
+    label = readable_label(group.get("label", "tidak_tersedia"))
+    score_pct = pct(score)
+
+    if group_name == "small_pelagic":
+        target = "pelagis kecil"
+        ecological_hint = "kelompok ini biasanya lebih responsif terhadap produktivitas permukaan, CHL, front, dan arus sedang."
+    elif group_name == "medium_pelagic":
+        target = "pelagis sedang"
+        ecological_hint = "kelompok ini lebih kuat dibaca melalui FGI current-aware, front, dynamic physics, arus, dan temporal memory."
+    else:
+        target = group_name.replace("_", " ")
+        ecological_hint = "kelompok ini dibaca melalui kombinasi fitur habitat dan dinamika laut."
+
+    if score_pct is None:
+        return f"Sinyal {target} belum dapat dihitung penuh karena fitur pendukung belum lengkap."
+
+    return (
+        f"Sinyal {target} berada pada tingkat {label} dengan skor sekitar {score_pct}%. "
+        f"Secara ekologis, {ecological_hint}"
+    )
+
+
+def make_species_card(
+    group_name: str,
+    group: Dict[str, Any],
+    metrics: Dict[str, Any],
+    derived_features: Dict[str, Any],
+) -> Dict[str, Any]:
+    score = group.get("score")
+    label = group.get("label")
+    score_pct = pct(score)
+
+    if group_name == "small_pelagic":
+        title = "Pelagis Kecil"
+        subtitle = "Kembung, selar, teri, layang kecil"
+    elif group_name == "medium_pelagic":
+        title = "Pelagis Sedang"
+        subtitle = "Tongkol, cakalang kecil, layang besar, pelagis menengah"
+    else:
+        title = group_name.replace("_", " ").title()
+        subtitle = ", ".join(group.get("target_examples", []))
+
+    drivers = group.get("drivers", [])[:5]
+    cautions = group.get("cautions", [])[:4]
+
+    headline = f"{title}: {readable_label(label)}"
+    if score_pct is not None:
+        headline = f"{title}: {readable_label(label)} ({score_pct}%)"
+
+    return {
+        "title": title,
+        "subtitle": subtitle,
+        "score": score,
+        "score_percent": score_pct,
+        "label": label,
+        "label_readable": readable_label(label),
+        "headline": headline,
+        "main_message": group_message(group_name, group),
+        "key_drivers": drivers,
+        "cautions": cautions,
+        "scientific_context": {
+            "fgi": metrics.get("fgi"),
+            "fgi_current_aware": metrics.get("fgi_current_aware"),
+            "sst_c": metrics.get("sst_c"),
+            "chl_mg_m3": metrics.get("chl_mg_m3"),
+            "current_ms": metrics.get("current_ms"),
+            "wave_m": metrics.get("wave_m"),
+            "front_score": derived_features.get("front_score"),
+            "dynamic_physics_score": derived_features.get("dynamic_physics_score"),
+            "temporal_memory_score": derived_features.get("temporal_memory_score"),
+            "bathymetry_score": derived_features.get("bathymetry_score"),
+            "upwelling_score": derived_features.get("upwelling_score"),
+        },
+        "use_guidance": [
+            "Gunakan sebagai interpretasi habitat awal, bukan kepastian lokasi ikan.",
+            "Bandingkan dengan pengalaman nelayan, tanda visual lapangan, dan catatan hasil tangkapan.",
+            "Untuk operasi nyata, pisahkan peluang habitat dari risiko keselamatan melaut.",
+        ],
+    }
+
+
+def build_species_summary(
+    species_groups: Dict[str, Any],
+    metrics: Dict[str, Any],
+    derived_features: Dict[str, Any],
+    confidence: Dict[str, Any],
+) -> Dict[str, Any]:
+    groups = species_groups.get("groups", {})
+
+    small = groups.get("small_pelagic", {})
+    medium = groups.get("medium_pelagic", {})
+
+    small_score = small.get("score")
+    medium_score = medium.get("score")
+
+    small_pct = pct(small_score)
+    medium_pct = pct(medium_score)
+
+    if small_score is None and medium_score is None:
+        headline = "Sinyal kelompok ikan belum dapat dibaca penuh."
+        main_message = "Feature Store belum memiliki cukup fitur untuk membandingkan pelagis kecil dan pelagis sedang."
+    elif small_score is not None and medium_score is not None:
+        gap = small_score - medium_score
+
+        if gap >= 0.04:
+            headline = "Hari ini relatif lebih mendukung pelagis kecil."
+            main_message = (
+                f"Pelagis kecil terbaca sekitar {small_pct}%, sedikit lebih kuat daripada "
+                f"pelagis sedang sekitar {medium_pct}%. Ini menunjukkan produktivitas permukaan, "
+                f"front, arus sedang, dan temporal memory lebih menonjol untuk kelompok ikan kecil."
+            )
+        elif gap <= -0.04:
+            headline = "Hari ini relatif lebih mendukung pelagis sedang."
+            main_message = (
+                f"Pelagis sedang terbaca sekitar {medium_pct}%, sedikit lebih kuat daripada "
+                f"pelagis kecil sekitar {small_pct}%. Ini menunjukkan FGI current-aware, front, "
+                f"dan dinamika fisik lebih menonjol untuk kelompok pelagis menengah."
+            )
+        else:
+            headline = "Hari ini pelagis kecil dan pelagis sedang sama-sama cukup mendukung."
+            main_message = (
+                f"Pelagis kecil terbaca sekitar {small_pct}% dan pelagis sedang sekitar {medium_pct}%. "
+                f"Keduanya berada pada kelas yang relatif berdekatan, sehingga interpretasi perlu "
+                f"dibantu oleh jenis alat tangkap, jarak operasi, dan pengetahuan nelayan."
+            )
+    elif small_score is not None:
+        headline = "Sinyal pelagis kecil dapat dibaca, sedangkan pelagis sedang belum lengkap."
+        main_message = f"Pelagis kecil terbaca sekitar {small_pct}%, tetapi data untuk pelagis sedang belum cukup lengkap."
+    else:
+        headline = "Sinyal pelagis sedang dapat dibaca, sedangkan pelagis kecil belum lengkap."
+        main_message = f"Pelagis sedang terbaca sekitar {medium_pct}%, tetapi data untuk pelagis kecil belum cukup lengkap."
+
+    scientific_note = (
+        f"{upwelling_note(derived_features.get('upwelling_score'))} "
+        f"{confidence_sentence(confidence)}"
+    )
+
+    operational_note = wave_operational_note(metrics.get("wave_m"))
+
+    cards = {}
+    for key, group in groups.items():
+        cards[key] = make_species_card(key, group, metrics, derived_features)
+
+    return {
+        "version": "0.4",
+        "type": "explainable_species_card",
+        "headline": headline,
+        "main_message": main_message,
+        "scientific_note": scientific_note,
+        "operational_note": operational_note,
+        "cards": cards,
+        "limitations": [
+            "Kartu ini adalah interpretasi kelompok ekologis, bukan prediksi pasti spesies.",
+            "Belum menggantikan validasi lapangan, log trip nelayan, dan kalibrasi hasil tangkapan.",
+            "Demersal dan reef/island fish belum diaktifkan karena memerlukan data habitat dasar laut dan validasi khusus.",
         ],
     }
 
@@ -1188,10 +1408,16 @@ def main() -> None:
     }
 
     species_groups = build_species_groups(metrics, derived_features)
+    species_summary = build_species_summary(
+        species_groups,
+        metrics,
+        derived_features,
+        confidence,
+    )
 
     output = {
         "module": "fgi_feature_store",
-        "version": "0.3",
+        "version": "0.4",
         "region": pick(earth, ["region"], "Aceh"),
         "generated_at": now_jakarta(),
         "source_snapshot": {
@@ -1210,6 +1436,7 @@ def main() -> None:
         "metrics": metrics,
         "derived_features": derived_features,
         "species_groups": species_groups,
+        "species_summary": species_summary,
         "data_quality": {
             "confidence_base": confidence_level,
             "raw_data_quality": pick(earth, ["data_quality", "metrics.data_quality"], {}),
