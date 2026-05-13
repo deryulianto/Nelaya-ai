@@ -59,6 +59,9 @@ mount("app.routers.me", prefix="")
 mount("app.routers.fgi", prefix="")
 mount("app.routers.fgi", prefix="/api/v1")
 
+# ✅ NEW: FGI Species API v0.4.1
+mount("app.routers.fgi_species", prefix="")
+
 # ✅ NEW: FGI Feature Store v0.1
 mount("app.routers.fgi_feature_store", prefix="")
 
