@@ -896,7 +896,7 @@ def main() -> None:
 
     output = {
         "module": "fgi_feature_store",
-        "version": "0.1.3",
+        "version": "0.1.4",
         "region": pick(earth, ["region"], "Aceh"),
         "generated_at": now_jakarta(),
         "source_snapshot": {
