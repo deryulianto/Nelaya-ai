@@ -400,6 +400,299 @@ def build_explanation(metrics: Dict[str, Any], derived: Dict[str, Any], confiden
     }
 
 
+
+def clamp01(value: Optional[float]) -> Optional[float]:
+    if value is None:
+        return None
+    try:
+        x = float(value)
+    except Exception:
+        return None
+    if math.isnan(x) or math.isinf(x):
+        return None
+    return max(0.0, min(1.0, x))
+
+
+def score_sst_for_pelagic(sst_c: Optional[float]) -> Optional[float]:
+    """
+    Skor kesesuaian SST kasar untuk pelagis tropis.
+    Ini rule awal, bukan model biologis final.
+    """
+    if sst_c is None:
+        return None
+
+    if 27.0 <= sst_c <= 31.5:
+        return 1.0
+    if 31.5 < sst_c <= 32.5:
+        return 0.70
+    if 26.0 <= sst_c < 27.0:
+        return 0.70
+    if 25.0 <= sst_c < 26.0:
+        return 0.50
+    if 32.5 < sst_c <= 33.5:
+        return 0.45
+    return 0.30
+
+
+def score_chl_productivity(chl_mg_m3: Optional[float]) -> Optional[float]:
+    """
+    Skor produktivitas awal dari CHL.
+    CHL terlalu tinggi tidak otomatis sangat baik karena bisa terkait bloom/turbidity.
+    """
+    if chl_mg_m3 is None:
+        return None
+
+    chl = chl_mg_m3
+
+    if chl < 0.05:
+        return 0.20
+    if chl < 0.08:
+        return 0.35
+    if chl < 0.25:
+        return 0.70
+    if chl < 0.70:
+        return 0.90
+    if chl < 1.50:
+        return 0.70
+    return 0.50
+
+
+def score_current_operational(current_ms: Optional[float]) -> Optional[float]:
+    """
+    Arus sedang cenderung baik: cukup dinamis tetapi tidak terlalu berat untuk operasi.
+    """
+    if current_ms is None:
+        return None
+
+    c = current_ms
+
+    if c < 0.10:
+        return 0.55
+    if c < 0.50:
+        return 0.90
+    if c < 0.90:
+        return 0.60
+    return 0.35
+
+
+def score_wave_operational(wave_m: Optional[float]) -> Optional[float]:
+    """
+    Skor kelayakan operasi sederhana dari tinggi gelombang.
+    """
+    if wave_m is None:
+        return None
+
+    w = wave_m
+
+    if w < 0.75:
+        return 1.00
+    if w < 1.50:
+        return 0.75
+    if w < 2.50:
+        return 0.45
+    return 0.20
+
+
+def weighted_species_score(items: list[tuple[str, Optional[float], float]]) -> Dict[str, Any]:
+    """
+    Hitung skor berbobot dengan mengabaikan komponen yang belum tersedia.
+    Bobot komponen tersedia dinormalisasi ulang.
+    """
+    used = []
+    total_weight = 0.0
+    total_score = 0.0
+
+    for name, value, weight in items:
+        x = clamp01(value)
+        if x is None:
+            used.append({
+                "name": name,
+                "value": None,
+                "weight": weight,
+                "used": False,
+                "weighted": None,
+            })
+            continue
+
+        total_weight += weight
+        total_score += x * weight
+
+        used.append({
+            "name": name,
+            "value": round(x, 4),
+            "weight": weight,
+            "used": True,
+            "weighted": round(x * weight, 4),
+        })
+
+    if total_weight <= 0:
+        return {
+            "score": None,
+            "effective_weight": 0.0,
+            "components": used,
+        }
+
+    score = total_score / total_weight
+
+    return {
+        "score": round(score, 4),
+        "effective_weight": round(total_weight, 4),
+        "components": used,
+    }
+
+
+def label_species_score(score: Optional[float]) -> str:
+    if score is None:
+        return "tidak_tersedia"
+    if score >= 0.75:
+        return "kuat_mendukung"
+    if score >= 0.60:
+        return "cukup_mendukung"
+    if score >= 0.45:
+        return "sedang"
+    if score >= 0.30:
+        return "lemah"
+    return "tidak_mendukung"
+
+
+def component_description(name: str) -> str:
+    mapping = {
+        "fgi_current_aware": "FGI current-aware mendukung peluang habitat.",
+        "fgi_base": "FGI dasar mendukung pembacaan habitat.",
+        "chl_productivity": "CHL menunjukkan dukungan produktivitas perairan.",
+        "sst_suitability": "SST berada dalam rentang yang sesuai untuk pelagis tropis.",
+        "front_score": "Front laut memberi indikasi zona pertemuan massa air.",
+        "dynamic_physics": "Dinamika fisik laut mendukung pembentukan zona potensial.",
+        "temporal_memory": "Temporal memory menunjukkan sinyal yang mulai bertahan.",
+        "current_support": "Arus berada pada kisaran yang mendukung operasi dan dinamika habitat.",
+        "wave_operational": "Gelombang masih relatif dapat dikelola.",
+        "upwelling": "Upwelling memberi dukungan terhadap produktivitas.",
+        "bathymetry_hotspot": "Struktur bathymetry/shelf-break memberi dukungan habitat.",
+    }
+    return mapping.get(name, f"{name} mendukung skor.")
+
+
+def component_caution(name: str) -> str:
+    mapping = {
+        "fgi_current_aware": "FGI current-aware belum kuat.",
+        "fgi_base": "FGI dasar belum kuat.",
+        "chl_productivity": "CHL belum menunjukkan produktivitas yang kuat.",
+        "sst_suitability": "SST perlu dibaca hati-hati terhadap batas kenyamanan ekologis.",
+        "front_score": "Sinyal front belum kuat.",
+        "dynamic_physics": "Dukungan dinamika fisik belum kuat.",
+        "temporal_memory": "Temporal memory belum kuat; sinyal belum cukup persisten.",
+        "current_support": "Arus dapat menjadi pembatas operasi atau belum cukup mendukung.",
+        "wave_operational": "Gelombang perlu dipantau sebagai faktor keselamatan.",
+        "upwelling": "Upwelling masih lemah atau belum menjadi driver utama.",
+        "bathymetry_hotspot": "Dukungan bathymetry/shelf-break belum dominan.",
+    }
+    return mapping.get(name, f"{name} perlu dibaca hati-hati.")
+
+
+def build_species_explanation(result: Dict[str, Any]) -> tuple[list[str], list[str]]:
+    drivers = []
+    cautions = []
+
+    for comp in result.get("components", []):
+        if not comp.get("used"):
+            cautions.append(f"{comp['name']} belum tersedia.")
+            continue
+
+        value = comp.get("value")
+
+        if value is not None and value >= 0.55:
+            drivers.append(component_description(comp["name"]))
+        elif value is not None and value < 0.45:
+            cautions.append(component_caution(comp["name"]))
+
+    if not drivers:
+        drivers.append("Skor tersedia, tetapi belum ada driver dominan yang sangat kuat.")
+
+    return drivers, cautions
+
+
+def build_species_groups(metrics: Dict[str, Any], derived_features: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    FGI Species Group v0.3
+    Rule awal berbasis ecological guild:
+    - small_pelagic
+    - medium_pelagic
+
+    Ini bukan model final per spesies. Ini fondasi awal untuk interpretasi biologis.
+    """
+    fgi_base = clamp01(metrics.get("fgi"))
+    fgi_current_aware = clamp01(metrics.get("fgi_current_aware")) or fgi_base
+
+    sst_score = score_sst_for_pelagic(metrics.get("sst_c"))
+    chl_score = score_chl_productivity(metrics.get("chl_mg_m3"))
+    current_support = score_current_operational(metrics.get("current_ms"))
+    wave_support = score_wave_operational(metrics.get("wave_m"))
+
+    front_score = clamp01(derived_features.get("front_score"))
+    dynamic_physics_score = clamp01(derived_features.get("dynamic_physics_score"))
+    temporal_memory_score = clamp01(derived_features.get("temporal_memory_score"))
+    bathymetry_score = clamp01(derived_features.get("bathymetry_score"))
+    upwelling_score = clamp01(derived_features.get("upwelling_score"))
+
+    small_items = [
+        ("chl_productivity", chl_score, 0.22),
+        ("sst_suitability", sst_score, 0.12),
+        ("front_score", front_score, 0.18),
+        ("current_support", current_support, 0.10),
+        ("wave_operational", wave_support, 0.08),
+        ("temporal_memory", temporal_memory_score, 0.16),
+        ("upwelling", upwelling_score, 0.09),
+        ("bathymetry_hotspot", bathymetry_score, 0.05),
+    ]
+
+    medium_items = [
+        ("fgi_current_aware", fgi_current_aware, 0.25),
+        ("front_score", front_score, 0.20),
+        ("dynamic_physics", dynamic_physics_score, 0.18),
+        ("temporal_memory", temporal_memory_score, 0.15),
+        ("current_support", current_support, 0.10),
+        ("wave_operational", wave_support, 0.07),
+        ("upwelling", upwelling_score, 0.05),
+    ]
+
+    small = weighted_species_score(small_items)
+    medium = weighted_species_score(medium_items)
+
+    small_drivers, small_cautions = build_species_explanation(small)
+    medium_drivers, medium_cautions = build_species_explanation(medium)
+
+    return {
+        "version": "0.3",
+        "method": "weighted_expert_rules_v0",
+        "scope": "ecological_group_not_single_species",
+        "groups": {
+            "small_pelagic": {
+                "score": small["score"],
+                "label": label_species_score(small["score"]),
+                "target_examples": ["kembung", "selar", "teri", "layang kecil"],
+                "components": small["components"],
+                "drivers": small_drivers,
+                "cautions": small_cautions,
+                "interpretation": "Kelompok pelagis kecil lebih sensitif terhadap CHL, front, arus sedang, dan memori produktivitas.",
+            },
+            "medium_pelagic": {
+                "score": medium["score"],
+                "label": label_species_score(medium["score"]),
+                "target_examples": ["tongkol", "cakalang kecil", "layang besar", "pelagis menengah"],
+                "components": medium["components"],
+                "drivers": medium_drivers,
+                "cautions": medium_cautions,
+                "interpretation": "Kelompok pelagis sedang lebih dipengaruhi kombinasi FGI current-aware, front, dinamika fisik, arus, dan temporal memory.",
+            },
+        },
+        "notes": [
+            "FGI Species Group v0.3 adalah model interpretasi awal berbasis kelompok ekologis, bukan prediksi pasti spesies.",
+            "Demersal dan reef/island fish belum diaktifkan karena membutuhkan data substrat, habitat dasar, terumbu, dan validasi lapangan lebih rinci.",
+            "Skor ini harus dikalibrasi dengan data trip nelayan sebelum dipakai sebagai rekomendasi operasional yang kuat.",
+        ],
+    }
+
+
 def main() -> None:
     earth = read_json(SOURCE_FILES["earth_signals"]) or {}
     dynamic = read_json(SOURCE_FILES["dynamic_physics"]) or {}
@@ -894,9 +1187,11 @@ def main() -> None:
         "cautions": confidence_cautions,
     }
 
+    species_groups = build_species_groups(metrics, derived_features)
+
     output = {
         "module": "fgi_feature_store",
-        "version": "0.1.4",
+        "version": "0.3",
         "region": pick(earth, ["region"], "Aceh"),
         "generated_at": now_jakarta(),
         "source_snapshot": {
@@ -914,6 +1209,7 @@ def main() -> None:
         },
         "metrics": metrics,
         "derived_features": derived_features,
+        "species_groups": species_groups,
         "data_quality": {
             "confidence_base": confidence_level,
             "raw_data_quality": pick(earth, ["data_quality", "metrics.data_quality"], {}),
