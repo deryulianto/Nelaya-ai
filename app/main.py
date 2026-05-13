@@ -128,6 +128,9 @@ mount("app.routers.time_series_profile", prefix="")
 
 mount("app.routers.fgi_time_series_station", prefix="")
 
+# ✅ NEW: FGI Legal AOI Guardrail v0.7.2
+mount("app.routers.fgi_legal_aoi", prefix="")
+
 # -----------------------------------------------------------------------------
 # OCEAN INTELLIGENCE ROUTERS
 # -----------------------------------------------------------------------------
