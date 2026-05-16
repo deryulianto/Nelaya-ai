@@ -65,6 +65,9 @@ mount("app.routers.fgi_species", prefix="")
 # ✅ NEW: FGI Feature Store v0.1
 mount("app.routers.fgi_feature_store", prefix="")
 
+# ✅ NEW: Field Validation Database v0.1
+mount("app.routers.field_feedback", prefix="")
+
 # ✅ NEW: FGI Species Grid v0.5.1
 mount("app.routers.fgi_species_grid", prefix="")
 
