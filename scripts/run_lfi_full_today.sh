@@ -31,19 +31,26 @@ echo "2) Plot LFI Alpha PNG"
 python scripts/plot_lagrangian_front_alpha.py "${BUILD_DATE_ARGS[@]}"
 
 echo
-echo "3) Integrate LFI into earth_signals_today.json"
+echo "3) Build Particle Drift Beta PNG + JSON + GeoJSON"
+python scripts/build_particle_drift_beta.py "${BUILD_DATE_ARGS[@]}" --seed-stride 2
+
+echo
+echo "4) Integrate LFI into earth_signals_today.json"
 python scripts/integrate_lfi_to_earth_signals.py
 
 echo
-echo "4) Output files"
+echo "5) Output files"
 ls -lh \
   data/physics/lagrangian_front_today.json \
   data/physics/lagrangian_front_today.geojson \
   data/physics/lagrangian_front_today.png \
+  data/physics/particle_drift_today.json \
+  data/physics/particle_drift_today.geojson \
+  data/physics/particle_drift_today.png \
   data/earth/earth_signals_today.json
 
 echo
-echo "5) LFI Summary"
+echo "6) LFI Summary"
 cat data/physics/lagrangian_front_today.json | jq '{
   version,
   date,
@@ -53,7 +60,7 @@ cat data/physics/lagrangian_front_today.json | jq '{
 }'
 
 echo
-echo "6) FGI Lagrangian-aware Summary"
+echo "7) FGI Lagrangian-aware Summary"
 cat data/earth/earth_signals_today.json | jq '.metrics | {
   fgi_value: .fgi.value,
   fgi_current_aware: .fgi_current_aware.value,
