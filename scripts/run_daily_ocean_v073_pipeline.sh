@@ -4,6 +4,7 @@ set -u
 ROOT="/home/coastalai/NELAYA-AI-LAB"
 PY="$ROOT/.venv/bin/python"
 LOG_DIR="$ROOT/logs"
+export PATH="$ROOT/.venv/bin:/home/coastalai/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH"
 DATE_RUN="$(date '+%Y-%m-%d %H:%M:%S %Z')"
 
 mkdir -p "$LOG_DIR"
@@ -72,8 +73,19 @@ run_step "Build daily current surface map" \
 run_step "Build ocean dynamic physics layer" \
   "$PY" scripts/build_ocean_dynamic_physics_features.py --front-threshold 0.50
 
+run_step "Build earth signals from raw" \
+  "$PY" scripts/build_earth_signals_from_raw.py
+
+
 run_step "Sync current metrics into earth signals" \
   "$PY" scripts/sync_earth_current_from_dynamic_physics.py
+
+run_step "Sync public current metrics from current analysis" \
+  "$PY" scripts/sync_earth_current_from_current_analysis.py
+
+
+run_step "Mirror canonical earth signals to legacy path" \
+  cp data/earth/earth_signals_today.json data/earth_signals_today.json
 
 optional_step "Build FGI physics support" \
   "$PY" scripts/build_physics_informed_fgi_v06.py
@@ -81,8 +93,14 @@ optional_step "Build FGI physics support" \
 run_step "Build tuna depth current analysis" \
   "$PY" scripts/build_tuna_depth_current_analysis.py --geojson-threshold 0.90 --max-points 150
 
+run_step "Build NS-informed ocean diagnostics v0.8-alpha" \
+  "$PY" scripts/build_ns_ocean_diagnostics_v08.py --geojson-threshold 0.70 --max-points 200
+
 optional_step "Build FGI temporal memory" \
   "$PY" scripts/build_fgi_temporal_memory.py
+
+run_step "Build integrated ocean decision v0.9-alpha" \
+  "$PY" scripts/build_integrated_ocean_decision_v09.py
 
 log "FINAL CHECK"
 
@@ -110,6 +128,23 @@ cat data/physics/tuna_depth_current_today.json | jq '{
   rank_score: .composite.candidate_rank_score_stats,
   hotspot: .composite.hotspot,
   ethical_note: .narrative.ethical_note
+}' || true
+
+echo "NS ocean diagnostics:"
+cat data/physics/ns_ocean_diagnostics_today.json | jq '{
+  version,
+  snapshot_date,
+  aggregate: .aggregate.score_stats,
+  hotspot: .aggregate.hotspot
+}' || true
+
+echo "Integrated ocean decision:"
+cat data/decision/integrated_ocean_decision_today.json | jq '{
+  version,
+  status,
+  snapshot_date,
+  confidence,
+  decision: .integrated_decision
 }' || true
 
 log "PIPELINE COMPLETED"

@@ -166,6 +166,12 @@ mount("app.routers.biodiversity", prefix="")
 mount("app.routers.decision", prefix="")
 mount("app.routers.decision", prefix="/api/v1")
 
+# Lagrangian Front
+mount("app.routers.lagrangian_front", prefix="")
+
+# ✅ NEW: Particle Drift Beta v0.1
+mount("app.routers.particle_drift", prefix="")
+
 
 
 # Optional init_db
@@ -174,3 +180,8 @@ try:
     init_db()
 except Exception:
     pass
+
+
+# ✅ NEW: FGI Lagrangian-aware Shadow Model v0.1
+mount("app.routers.fgi_lagrangian_aware", prefix="")
+

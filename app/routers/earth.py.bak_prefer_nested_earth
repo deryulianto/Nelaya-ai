@@ -11,8 +11,8 @@ router = APIRouter(prefix="/api/v1/earth", tags=["Earth"])
 ROOT = Path(__file__).resolve().parents[2]
 
 CANDIDATES = [
-    ROOT / "data" / "earth" / "earth_signals_today.json",  # canonical
-    ROOT / "data" / "earth_signals_today.json",              # legacy fallback
+    ROOT / "data" / "earth_signals_today.json",
+    ROOT / "data" / "earth" / "earth_signals_today.json",
     ROOT / "data" / "signals_today.json",
 ]
 

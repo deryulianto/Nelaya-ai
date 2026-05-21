@@ -9,32 +9,32 @@
       "max_lat": 7.0
     }
   },
-  "date_utc": "2026-05-05",
-  "generated_at": "2026-05-06T00:54:07.300284+00:00",
+  "date_utc": "2026-05-16",
+  "generated_at": "2026-05-17T00:15:58.156142+00:00",
   "inputs": {
     "sst_nrt": {
-      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/sst_nrt/2026/05/sst_nrt_aceh_2026-05-05.nc",
-      "day": "2026-05-05"
+      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/sst_nrt/2026/05/sst_nrt_aceh_2026-05-15.nc",
+      "day": "2026-05-15"
     },
     "chl_nrt": {
-      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/chl_nrt/2026/05/chl_nrt_aceh_2026-05-05.nc",
-      "day": "2026-05-05"
+      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/chl_nrt/2026/05/chl_nrt_aceh_2026-05-16.nc",
+      "day": "2026-05-16"
     },
     "ssh_anfc": {
-      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/ssh_anfc/2026/05/ssh_aceh_2026-05-05.nc",
-      "day": "2026-05-05"
+      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/ssh_anfc/2026/05/ssh_aceh_2026-05-16.nc",
+      "day": "2026-05-16"
     },
     "sal_anfc": {
-      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/sal_anfc/2026/05/sal_aceh_2026-05-05.nc",
-      "day": "2026-05-05"
+      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/sal_anfc/2026/05/sal_aceh_2026-05-16.nc",
+      "day": "2026-05-16"
     },
     "wave_anfc": {
-      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/wave_anfc/2026/05/wave_aceh_2026-05-05.nc",
-      "day": "2026-05-05"
+      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/wave_anfc/2026/05/wave_aceh_2026-05-16.nc",
+      "day": "2026-05-16"
     },
     "wind_nrt": {
-      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/wind_nrt/2026/05/wind_nrt_aceh_2026-05-04.nc",
-      "day": "2026-05-04"
+      "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/wind_nrt/2026/05/wind_nrt_aceh_2026-05-15.nc",
+      "day": "2026-05-15"
     },
     "current": {
       "path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/cur_nrt/2026/05/current_nrt_aceh_2026-05-01.nc",
@@ -45,46 +45,46 @@
   },
   "metrics": {
     "sst": {
-      "value": 31.060604095458984,
+      "value": 30.744783401489258,
       "unit": "°C",
       "source_kind": "sst_nrt",
-      "source_date": "2026-05-05",
-      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/sst_nrt/2026/05/sst_nrt_aceh_2026-05-05.nc"
+      "source_date": "2026-05-15",
+      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/sst_nrt/2026/05/sst_nrt_aceh_2026-05-15.nc"
     },
     "chl": {
-      "value": 0.2624317407608032,
+      "value": 0.6782752275466919,
       "unit": "mg/m³",
       "source_kind": "chl_nrt",
-      "source_date": "2026-05-05",
-      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/chl_nrt/2026/05/chl_nrt_aceh_2026-05-05.nc"
+      "source_date": "2026-05-16",
+      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/chl_nrt/2026/05/chl_nrt_aceh_2026-05-16.nc"
     },
     "ssh": {
-      "value": 50.664222240448,
+      "value": 65.37551283836365,
       "unit": "cm",
       "source_kind": "ssh_anfc",
-      "source_date": "2026-05-05",
-      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/ssh_anfc/2026/05/ssh_aceh_2026-05-05.nc"
+      "source_date": "2026-05-16",
+      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/ssh_anfc/2026/05/ssh_aceh_2026-05-16.nc"
     },
     "sal": {
-      "value": 33.18544006347656,
+      "value": 33.323150634765625,
       "unit": "psu",
       "source_kind": "sal_anfc",
-      "source_date": "2026-05-05",
-      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/sal_anfc/2026/05/sal_aceh_2026-05-05.nc"
+      "source_date": "2026-05-16",
+      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/sal_anfc/2026/05/sal_aceh_2026-05-16.nc"
     },
     "wave": {
-      "value": 1.014399114750447,
+      "value": 1.9413349889543794,
       "unit": "m",
       "source_kind": "wave_anfc",
-      "source_date": "2026-05-05",
-      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/wave_anfc/2026/05/wave_aceh_2026-05-05.nc"
+      "source_date": "2026-05-16",
+      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/wave_anfc/2026/05/wave_aceh_2026-05-16.nc"
     },
     "wind": {
-      "value": 4.057216651528397,
+      "value": 7.538513981816986,
       "unit": "m/s",
       "source_kind": "wind_nrt",
-      "source_date": "2026-05-04",
-      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/wind_nrt/2026/05/wind_nrt_aceh_2026-05-04.nc"
+      "source_date": "2026-05-15",
+      "source_path": "/home/coastalai/NELAYA-AI-LAB/data/raw/aceh_simeulue/wind_nrt/2026/05/wind_nrt_aceh_2026-05-15.nc"
     },
     "current": {
       "value": 0.21702463383131512,
@@ -99,73 +99,76 @@
       }
     },
     "fgi": {
-      "value": 0.610068989998111,
+      "value": 0.7270715215587163,
       "unit": "index",
       "source_kind": "fgi_realtime_v1",
-      "source_date": "2026-05-05",
+      "source_date": "2026-05-16",
       "source_path": null,
-      "band": "medium",
+      "band": "high",
       "note": "FGI realtime v1 from current SST, CHL, SAL",
       "inputs": {
-        "sst_c": 31.060604095458984,
-        "chl_mg_m3": 0.2624317407608032,
-        "sal_psu": 33.18544006347656
+        "sst_c": 30.744783401489258,
+        "chl_mg_m3": 0.6782752275466919,
+        "sal_psu": 33.323150634765625
       }
     },
     "fgi_current_aware": {
-      "value": 0.6466731293979977,
+      "value": 0.7706958128522393,
       "unit": "index",
       "source_kind": "fgi_current_aware_v1",
-      "source_date": "2026-05-06",
+      "source_date": "2026-05-17",
       "source_path": null,
       "note": "FGI adjusted with ocean current (experimental shadow model)",
       "inputs": {
-        "fgi_base": 0.610068989998111,
+        "fgi_base": 0.7270715215587163,
         "current_ms": 0.21702463383131512
       }
     },
     "osi": {
-      "value": 0.6660787117968132,
+      "value": 0.24267459236320413,
       "unit": "index",
       "source_kind": "osi_realtime_v1",
-      "source_date": "2026-05-05",
+      "source_date": "2026-05-16",
       "source_path": null,
-      "band": "high",
+      "band": "low",
       "note": "OSI realtime v1 from current SST, CHL, SSH, wave",
       "inputs": {
-        "sst_c": 31.060604095458984,
-        "chl_mg_m3": 0.2624317407608032,
-        "ssh_cm": 50.664222240448,
-        "wave_m": 1.014399114750447
+        "sst_c": 30.744783401489258,
+        "chl_mg_m3": 0.6782752275466919,
+        "ssh_cm": 65.37551283836365,
+        "wave_m": 1.9413349889543794
       }
     },
     "msi": {
-      "value": 0.5244587920698628,
+      "value": 0.3526116236965847,
       "unit": "index",
       "source_kind": "msi_realtime_v1",
-      "source_date": "2026-05-05",
+      "source_date": "2026-05-16",
       "source_path": null,
       "band": "medium",
       "note": "MSI realtime v1 from FGI, OSI, wave, and thermal penalty",
       "inputs": {
-        "fgi": 0.610068989998111,
-        "osi": 0.6660787117968132,
-        "wave_m": 1.014399114750447,
-        "sst_c": 31.060604095458984
+        "fgi": 0.7270715215587163,
+        "osi": 0.24267459236320413,
+        "wave_m": 1.9413349889543794,
+        "sst_c": 30.744783401489258
       }
     },
-    "current_ms": 0.23170842642885162,
-    "current_u_ms": -0.1669253016453119,
-    "current_v_ms": -0.16070077332967683,
-    "current_direction_deg": 226.08842466443318,
-    "current_direction_label": "barat_daya",
-    "current_source_date": "2026-05-06",
-    "current_source_file": "data/raw/aceh_simeulue/cur_nrt/2026/05/current_nrt_aceh_2026-05-06.nc",
-    "current_source": "ocean_dynamic_physics_today",
+    "current_ms": 0.3771502008273591,
+    "current_u_ms": 0.3789898685933018,
+    "current_v_ms": -0.26665790092391023,
+    "current_direction_deg": 129.57655713184147,
+    "current_direction_label": "tenggara",
+    "current_source_date": "2026-05-17",
+    "current_source_file": "data/raw/aceh_simeulue/cur_nrt/2026-05-17.nc",
+    "current_source": "current_analysis_today",
     "current_note": "Synced from data/physics/ocean_dynamic_physics_today.json to keep dashboard current metrics consistent with FGI Physics Support.",
-    "current_speed_ms": 0.23170842642885162,
-    "current_bearing_deg": 226.08842466443318,
-    "current_bearing_label": "barat_daya"
+    "current_speed_ms": 0.46340021215091615,
+    "current_bearing_deg": 125.13028259707374,
+    "current_bearing_label": "tenggara",
+    "current_max_ms": 1.0007368771300647,
+    "current_p75_ms": 0.5124676806434679,
+    "current_synced_at": "2026-05-17T07:15:58.630703+07:00"
   },
   "quick_compare": {
     "selat_malaka": {
@@ -174,11 +177,11 @@
         "lon": 97.2
       },
       "metrics": {
-        "sst_c": 30.7327938079834,
-        "chl": 0.3281944990158081,
-        "hs_m": 0.12999999709427357,
-        "ssh_cm": 51.134300231933594,
-        "wind_ms": 4.07235803926914
+        "sst_c": 30.972970962524414,
+        "chl": 0.13311435282230377,
+        "hs_m": 0.5899999868124723,
+        "ssh_cm": 70.18024921417236,
+        "wind_ms": null
       }
     },
     "samudra_hindia": {
@@ -187,23 +190,23 @@
         "lon": 94.8
       },
       "metrics": {
-        "sst_c": 30.972885131835938,
-        "chl": 0.07828063517808914,
-        "hs_m": 1.1899999734014273,
-        "ssh_cm": 46.30752503871918,
-        "wind_ms": 2.092124000581065
+        "sst_c": 30.28227996826172,
+        "chl": 0.13061799213755876,
+        "hs_m": 2.4099999461323023,
+        "ssh_cm": 62.99796104431152,
+        "wind_ms": 9.297655618487921
       }
     }
   },
   "current_ms": 0.21702463383131512,
   "current_u_ms": -0.046436773281312245,
   "current_v_ms": 0.04532792438687615,
-  "sst_c": 31.060604095458984,
-  "chl_mg_m3": 0.2624317407608032,
-  "wind_ms": 4.057216651528397,
-  "wave_m": 1.014399114750447,
-  "ssh_cm": 50.664222240448,
-  "sal_psu": 33.18544006347656,
-  "fgi": 0.610068989998111,
-  "fgi_current_aware": 0.6466731293979977
+  "sst_c": 30.744783401489258,
+  "chl_mg_m3": 0.6782752275466919,
+  "wind_ms": 7.538513981816986,
+  "wave_m": 1.9413349889543794,
+  "ssh_cm": 65.37551283836365,
+  "sal_psu": 33.323150634765625,
+  "fgi": 0.7270715215587163,
+  "fgi_current_aware": 0.7706958128522393
 }

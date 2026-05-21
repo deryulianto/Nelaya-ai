@@ -2,14 +2,16 @@
   "module": "nelaya_ai_fgi_temporal_memory",
   "version": "0.7-alpha",
   "status": "ready",
-  "created_at": "2026-05-06T20:41:01.990682+07:00",
+  "created_at": "2026-05-17T07:16:02.442570+07:00",
   "source_dates": [
-    "2026-05-04",
-    "2026-05-05",
-    "2026-05-06"
+    "2026-05-13",
+    "2026-05-14",
+    "2026-05-15",
+    "2026-05-16",
+    "2026-05-17"
   ],
   "window_days_requested": 5,
-  "window_days_used": 3,
+  "window_days_used": 5,
   "active_threshold": 0.22,
   "outputs": {
     "netcdf": "/home/coastalai/NELAYA-AI-LAB/data/physics/fgi_temporal_memory_today.nc",
@@ -18,7 +20,7 @@
       "created": true,
       "file": "/home/coastalai/NELAYA-AI-LAB/data/physics/fgi_temporal_memory_preview.geojson",
       "threshold": 0.25,
-      "point_count": 150
+      "point_count": 66
     }
   },
   "grid": {
@@ -31,9 +33,11 @@
   },
   "weights": {
     "recency_weights_oldest_to_newest": [
-      0.22654091966098644,
-      0.3203772410170408,
-      0.4530818393219729
+      0.08894707460905531,
+      0.1257901592455376,
+      0.17789414921811061,
+      0.2515803184910752,
+      0.35578829843622123
     ],
     "half_life_days": 2.0,
     "temporal_memory_score": {
@@ -43,353 +47,369 @@
     }
   },
   "summary_metrics": {
-    "mean_temporal_memory_score": 0.30748933615014734,
-    "max_temporal_memory_score": 0.7185850716906479,
-    "mean_persistence_score": 0.16763341067285384,
-    "mean_stability_score": 0.9983033632333617,
-    "mean_temporal_confidence": 0.26969576719576727,
-    "mean_temporal_memory_confidence_adjusted": 0.15820859182546648,
-    "max_temporal_memory_confidence_adjusted": 0.41039925265006466,
-    "history_maturity_factor": 0.6
+    "mean_temporal_memory_score": 0.23519420963745696,
+    "max_temporal_memory_score": 0.7014042212269553,
+    "mean_persistence_score": 0.03420365535248042,
+    "mean_stability_score": 0.9927376093855533,
+    "mean_temporal_confidence": 0.44436507936507935,
+    "mean_temporal_memory_confidence_adjusted": 0.16454951021001754,
+    "max_temporal_memory_confidence_adjusted": 0.5372756334598477,
+    "history_maturity_factor": 1.0
   },
   "stats": {
     "today_physics_support_score": {
-      "count": 503,
-      "nan_ratio": 0.9168320105820106,
-      "min": 0.01852967248222288,
-      "p05": 0.022821681253110467,
-      "p25": 0.04391458962467727,
-      "p50": 0.06791680704104325,
-      "p75": 0.15926100662125597,
-      "p95": 0.2511197454852556,
-      "max": 0.310280464489411,
-      "mean": 0.10174210958934858
+      "count": 81,
+      "nan_ratio": 0.9866071428571429,
+      "min": 0.010214207575753172,
+      "p05": 0.011795103646472346,
+      "p25": 0.01540204024342387,
+      "p50": 0.01846896817318779,
+      "p75": 0.02176149781901714,
+      "p95": 0.025172932299829257,
+      "max": 0.02655673193753994,
+      "mean": 0.018456337781406734
     },
     "weighted_physics_support_score": {
-      "count": 862,
-      "nan_ratio": 0.857473544973545,
-      "min": 0.01852967248222288,
-      "p05": 0.02383918793392538,
-      "p25": 0.041494576136484225,
-      "p50": 0.06531227230393165,
-      "p75": 0.18523047344675186,
-      "p95": 0.27563675201586885,
-      "max": 0.374633492645884,
-      "mean": 0.10923771059550257
+      "count": 1915,
+      "nan_ratio": 0.6833664021164021,
+      "min": 0.010214207575753172,
+      "p05": 0.016320996999349448,
+      "p25": 0.023717196175631398,
+      "p50": 0.03608359863963353,
+      "p75": 0.059131113951225875,
+      "p95": 0.19383453331374131,
+      "max": 0.37069455491299325,
+      "mean": 0.054834240859951484
     },
     "persistence_score": {
-      "count": 862,
-      "nan_ratio": 0.857473544973545,
+      "count": 1915,
+      "nan_ratio": 0.6833664021164021,
       "min": 0.0,
       "p05": 0.0,
       "p25": 0.0,
       "p50": 0.0,
       "p75": 0.0,
-      "p95": 1.0,
+      "p95": 0.0,
       "max": 1.0,
-      "mean": 0.16763341067285384
+      "mean": 0.03420365535248042
     },
     "stability_score": {
-      "count": 862,
-      "nan_ratio": 0.857473544973545,
-      "min": 0.8363788924882501,
-      "p05": 1.0,
+      "count": 1915,
+      "nan_ratio": 0.6833664021164021,
+      "min": 0.7811697706005046,
+      "p05": 0.9531354457418302,
       "p25": 1.0,
       "p50": 1.0,
       "p75": 1.0,
       "p95": 1.0,
       "max": 1.0,
-      "mean": 0.9983033632333617
+      "mean": 0.9927376093855533
     },
     "temporal_memory_score": {
-      "count": 862,
-      "nan_ratio": 0.857473544973545,
-      "min": 0.20833835261700032,
-      "p05": 0.21072763457026644,
-      "p25": 0.2186725592614179,
-      "p50": 0.22939052253676925,
-      "p75": 0.28259784063173377,
-      "p95": 0.6740365384071411,
-      "max": 0.7185850716906479,
-      "mean": 0.30748933615014734
+      "count": 1915,
+      "nan_ratio": 0.6833664021164021,
+      "min": 0.17330275566354622,
+      "p05": 0.2018785035664717,
+      "p25": 0.20944706658888684,
+      "p50": 0.21536847621613248,
+      "p75": 0.22647384398536433,
+      "p95": 0.2872255399911836,
+      "max": 0.7014042212269553,
+      "mean": 0.23519420963745696
     },
     "temporal_confidence": {
       "count": 6048,
       "nan_ratio": 0.0,
-      "min": 0.24,
-      "p05": 0.24,
-      "p25": 0.24,
-      "p50": 0.24,
-      "p75": 0.24,
-      "p95": 0.43999999999999995,
-      "max": 0.6399999999999999,
-      "mean": 0.26969576719576727
+      "min": 0.4,
+      "p05": 0.4,
+      "p25": 0.4,
+      "p50": 0.4,
+      "p75": 0.52,
+      "p95": 0.64,
+      "max": 0.76,
+      "mean": 0.44436507936507935
     },
     "temporal_memory_confidence_adjusted": {
-      "count": 862,
-      "nan_ratio": 0.857473544973545,
-      "min": 0.10600255381152975,
-      "p05": 0.10721822046935155,
-      "p25": 0.11126059815220941,
-      "p50": 0.11678731374583023,
-      "p75": 0.14424329196818125,
-      "p95": 0.3436913507460502,
-      "max": 0.41039925265006466,
-      "mean": 0.15820859182546648
+      "count": 1915,
+      "nan_ratio": 0.6833664021164021,
+      "min": 0.13274991083827642,
+      "p05": 0.14271593983120567,
+      "p25": 0.14591056782104705,
+      "p50": 0.1514587794268147,
+      "p75": 0.15927671739111532,
+      "p95": 0.19839326771174867,
+      "max": 0.5372756334598477,
+      "mean": 0.16454951021001754
     }
   },
   "centroid_history": [
     {
-      "lat": 5.9267388135651755,
-      "lon": 98.0212880108731,
-      "total_weight": 26.892448263523935,
-      "cell_count": 100,
+      "lat": 3.9074773377663368,
+      "lon": 95.68423303084444,
+      "total_weight": 0.8430542180436421,
+      "cell_count": 3,
       "threshold": 0.22,
-      "date": "2026-05-04"
+      "date": "2026-05-13"
     },
     {
-      "lat": 6.168772833740944,
-      "lon": 98.33387653365016,
-      "total_weight": 14.385033608749723,
-      "cell_count": 57,
+      "lat": 6.300962717334999,
+      "lon": 98.62441002819313,
+      "total_weight": 2.0588461366662916,
+      "cell_count": 9,
       "threshold": 0.22,
-      "date": "2026-05-06"
+      "date": "2026-05-14"
+    },
+    {
+      "lat": 4.133712114619553,
+      "lon": 95.44130241619337,
+      "total_weight": 1.8231422051490926,
+      "cell_count": 7,
+      "threshold": 0.22,
+      "date": "2026-05-15"
+    },
+    {
+      "lat": 6.0956357698921675,
+      "lon": 97.84852815251617,
+      "total_weight": 12.14269015489058,
+      "cell_count": 49,
+      "threshold": 0.22,
+      "date": "2026-05-16"
     }
   ],
   "movement_consistency": {
     "available": true,
-    "centroid_shift_km": 43.806748905316724,
-    "centroid_shift_bearing_deg": 52.07847677778193,
+    "centroid_shift_km": 344.47542026119925,
+    "centroid_shift_bearing_deg": 50.6056494733844,
     "centroid_shift_direction_label": "timur_laut",
-    "current_direction_deg": 226.08842466443318,
-    "current_direction_label": "barat_daya",
-    "angle_difference_deg": 174.00994788665125,
-    "movement_consistency_score": 0.0027299855185700106,
+    "current_direction_deg": 125.13028259707374,
+    "current_direction_label": "tenggara",
+    "angle_difference_deg": 74.52463312368934,
+    "movement_consistency_score": 0.6334120293032777,
     "note": "Score close to 1 means centroid shift broadly aligns with mean current direction."
   },
   "top_cells": {
     "temporal_memory_score": [
       {
         "rank": 1,
-        "lat": 5.541666666666666,
-        "lon": 97.45833333333333,
-        "temporal_memory_score": 0.7185850716906479,
+        "lat": 3.958333333333333,
+        "lon": 95.70833333333333,
+        "temporal_memory_score": 0.7014042212269553,
         "today_physics_support_score": null,
-        "weighted_physics_support_score": 0.374633492645884,
+        "weighted_physics_support_score": 0.37069455491299325,
         "persistence_score": 1.0,
-        "stability_score": 1.0,
-        "temporal_confidence": 0.43999999999999995
+        "stability_score": 0.9229583575805421,
+        "temporal_confidence": 0.64
       },
       {
         "rank": 2,
-        "lat": 5.624999999999998,
-        "lon": 97.54166666666666,
-        "temporal_memory_score": 0.7045386962090769,
+        "lat": 6.458333333333333,
+        "lon": 98.04166666666666,
+        "temporal_memory_score": 0.6860199646216305,
         "today_physics_support_score": null,
-        "weighted_physics_support_score": 0.34341932490905974,
+        "weighted_physics_support_score": 0.302266588048068,
         "persistence_score": 1.0,
         "stability_score": 1.0,
-        "temporal_confidence": 0.43999999999999995
+        "temporal_confidence": 0.52
       },
       {
         "rank": 3,
-        "lat": 5.624999999999998,
-        "lon": 97.45833333333333,
-        "temporal_memory_score": 0.7000456017907049,
+        "lat": 6.208333333333333,
+        "lon": 97.70833333333333,
+        "temporal_memory_score": 0.6846909298051362,
         "today_physics_support_score": null,
-        "weighted_physics_support_score": 0.3334346706460106,
+        "weighted_physics_support_score": 0.2993131773447471,
         "persistence_score": 1.0,
         "stability_score": 1.0,
-        "temporal_confidence": 0.43999999999999995
+        "temporal_confidence": 0.52
       },
       {
         "rank": 4,
-        "lat": 6.208333333333333,
-        "lon": 98.04166666666666,
-        "temporal_memory_score": 0.6962868114000291,
+        "lat": 6.374999999999998,
+        "lon": 97.95833333333333,
+        "temporal_memory_score": 0.6836899812826733,
         "today_physics_support_score": null,
-        "weighted_physics_support_score": 0.32508180311117585,
+        "weighted_physics_support_score": 0.2970888472948298,
         "persistence_score": 1.0,
         "stability_score": 1.0,
-        "temporal_confidence": 0.43999999999999995
+        "temporal_confidence": 0.52
       },
       {
         "rank": 5,
-        "lat": 5.541666666666666,
-        "lon": 97.54166666666666,
-        "temporal_memory_score": 0.6960931775202497,
+        "lat": 6.208333333333333,
+        "lon": 97.79166666666666,
+        "temporal_memory_score": 0.6832269063020266,
         "today_physics_support_score": null,
-        "weighted_physics_support_score": 0.32465150560055506,
+        "weighted_physics_support_score": 0.29605979178228126,
         "persistence_score": 1.0,
         "stability_score": 1.0,
-        "temporal_confidence": 0.43999999999999995
+        "temporal_confidence": 0.52
       },
       {
         "rank": 6,
-        "lat": 5.541666666666666,
-        "lon": 97.625,
-        "temporal_memory_score": 0.6936843012424834,
+        "lat": 5.624999999999998,
+        "lon": 97.54166666666666,
+        "temporal_memory_score": 0.6810243744769585,
         "today_physics_support_score": null,
-        "weighted_physics_support_score": 0.3192984472055188,
+        "weighted_physics_support_score": 0.2911652766154634,
         "persistence_score": 1.0,
         "stability_score": 1.0,
-        "temporal_confidence": 0.43999999999999995
+        "temporal_confidence": 0.52
       },
       {
         "rank": 7,
-        "lat": 5.624999999999998,
-        "lon": 97.625,
-        "temporal_memory_score": 0.6934626005205724,
+        "lat": 6.291666666666666,
+        "lon": 97.875,
+        "temporal_memory_score": 0.6803066921249179,
         "today_physics_support_score": null,
-        "weighted_physics_support_score": 0.3188057789346055,
+        "weighted_physics_support_score": 0.2895704269442622,
         "persistence_score": 1.0,
         "stability_score": 1.0,
-        "temporal_confidence": 0.43999999999999995
+        "temporal_confidence": 0.52
       },
       {
         "rank": 8,
-        "lat": 5.791666666666666,
-        "lon": 97.54166666666666,
-        "temporal_memory_score": 0.6931155437445657,
+        "lat": 2.8749999999999987,
+        "lon": 95.45833333333333,
+        "temporal_memory_score": 0.677228185845334,
         "today_physics_support_score": null,
-        "weighted_physics_support_score": 0.3180345416545905,
+        "weighted_physics_support_score": 0.2827293018785199,
         "persistence_score": 1.0,
         "stability_score": 1.0,
-        "temporal_confidence": 0.43999999999999995
+        "temporal_confidence": 0.52
       },
       {
         "rank": 9,
-        "lat": 5.708333333333333,
-        "lon": 97.54166666666666,
-        "temporal_memory_score": 0.692254941271423,
+        "lat": 6.124999999999998,
+        "lon": 97.70833333333333,
+        "temporal_memory_score": 0.6739850303336362,
         "today_physics_support_score": null,
-        "weighted_physics_support_score": 0.3161220917142731,
+        "weighted_physics_support_score": 0.27552228963030273,
         "persistence_score": 1.0,
         "stability_score": 1.0,
-        "temporal_confidence": 0.43999999999999995
+        "temporal_confidence": 0.52
       },
       {
         "rank": 10,
         "lat": 6.208333333333333,
-        "lon": 97.95833333333333,
-        "temporal_memory_score": 0.6901998295918814,
+        "lon": 97.625,
+        "temporal_memory_score": 0.6736268615260406,
         "today_physics_support_score": null,
-        "weighted_physics_support_score": 0.3115551768708478,
+        "weighted_physics_support_score": 0.2747263589467568,
         "persistence_score": 1.0,
         "stability_score": 1.0,
-        "temporal_confidence": 0.43999999999999995
+        "temporal_confidence": 0.52
       }
     ],
     "temporal_memory_confidence_adjusted": [
       {
         "rank": 1,
-        "lat": 5.874999999999998,
-        "lon": 98.20833333333333,
-        "temporal_memory_confidence_adjusted": 0.41039925265006466,
-        "today_physics_support_score": 0.2714477318143623,
-        "weighted_physics_support_score": 0.2696936409082165,
+        "lat": 3.958333333333333,
+        "lon": 95.70833333333333,
+        "temporal_memory_confidence_adjusted": 0.5372756334598477,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.37069455491299325,
         "persistence_score": 1.0,
-        "stability_score": 0.9917471787958135,
-        "temporal_confidence": 0.6399999999999999
+        "stability_score": 0.9229583575805421,
+        "temporal_confidence": 0.64
       },
       {
         "rank": 2,
-        "lat": 5.708333333333333,
-        "lon": 98.20833333333333,
-        "temporal_memory_confidence_adjusted": 0.40788236323627153,
-        "today_physics_support_score": 0.2636683325850619,
-        "weighted_physics_support_score": 0.26151749330968976,
+        "lat": 3.8749999999999987,
+        "lon": 95.70833333333333,
+        "temporal_memory_confidence_adjusted": 0.49191943373221486,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2396492287052383,
         "persistence_score": 1.0,
-        "stability_score": 0.9896075332995394,
-        "temporal_confidence": 0.6399999999999999
+        "stability_score": 0.921751596589551,
+        "temporal_confidence": 0.64
       },
       {
         "rank": 3,
-        "lat": 5.791666666666666,
-        "lon": 98.20833333333333,
-        "temporal_memory_confidence_adjusted": 0.40758868316750985,
-        "today_physics_support_score": 0.2588551159512349,
-        "weighted_physics_support_score": 0.2615269620991231,
+        "lat": 6.458333333333333,
+        "lon": 98.04166666666666,
+        "temporal_memory_confidence_adjusted": 0.47198173565968177,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.302266588048068,
         "persistence_score": 1.0,
-        "stability_score": 0.9871900138630529,
-        "temporal_confidence": 0.6399999999999999
+        "stability_score": 1.0,
+        "temporal_confidence": 0.52
       },
       {
         "rank": 4,
-        "lat": 6.624999999999998,
-        "lon": 98.54166666666666,
-        "temporal_memory_confidence_adjusted": 0.40470078108342034,
-        "today_physics_support_score": 0.24763178765122515,
-        "weighted_physics_support_score": 0.2469326511255744,
+        "lat": 6.208333333333333,
+        "lon": 97.70833333333333,
+        "temporal_memory_confidence_adjusted": 0.4710673597059337,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2993131773447471,
         "persistence_score": 1.0,
-        "stability_score": 0.9964640438073757,
-        "temporal_confidence": 0.6399999999999999
+        "stability_score": 1.0,
+        "temporal_confidence": 0.52
       },
       {
         "rank": 5,
-        "lat": 5.708333333333333,
-        "lon": 98.54166666666666,
-        "temporal_memory_confidence_adjusted": 0.4031583469334654,
-        "today_physics_support_score": 0.24986098690253736,
-        "weighted_physics_support_score": 0.25880889795099987,
+        "lat": 6.374999999999998,
+        "lon": 97.95833333333333,
+        "temporal_memory_confidence_adjusted": 0.4703787071224792,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2970888472948298,
         "persistence_score": 1.0,
-        "stability_score": 0.9571573534146358,
-        "temporal_confidence": 0.6399999999999999
+        "stability_score": 1.0,
+        "temporal_confidence": 0.52
       },
       {
         "rank": 6,
-        "lat": 6.708333333333333,
-        "lon": 98.45833333333333,
-        "temporal_memory_confidence_adjusted": 0.39983847775643616,
-        "today_physics_support_score": 0.23267740805750703,
-        "weighted_physics_support_score": 0.23644888864299757,
+        "lat": 6.208333333333333,
+        "lon": 97.79166666666666,
+        "temporal_memory_confidence_adjusted": 0.4700601115357943,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.29605979178228126,
         "persistence_score": 1.0,
-        "stability_score": 0.9803796689314881,
-        "temporal_confidence": 0.6399999999999999
+        "stability_score": 1.0,
+        "temporal_confidence": 0.52
       },
       {
         "rank": 7,
-        "lat": 6.874999999999998,
-        "lon": 98.70833333333333,
-        "temporal_memory_confidence_adjusted": 0.39684270137096345,
-        "today_physics_support_score": 0.22106592379899,
-        "weighted_physics_support_score": 0.22402470049837941,
+        "lat": 5.624999999999998,
+        "lon": 97.54166666666666,
+        "temporal_memory_confidence_adjusted": 0.4685447696401474,
+        "today_physics_support_score": null,
+        "weighted_physics_support_score": 0.2911652766154634,
         "persistence_score": 1.0,
-        "stability_score": 0.9838907470751496,
-        "temporal_confidence": 0.6399999999999999
+        "stability_score": 1.0,
+        "temporal_confidence": 0.52
       },
       {
         "rank": 8,
-        "lat": 5.541666666666666,
-        "lon": 97.45833333333333,
-        "temporal_memory_confidence_adjusted": 0.3656160844762016,
+        "lat": 6.291666666666666,
+        "lon": 97.875,
+        "temporal_memory_confidence_adjusted": 0.46805100418194345,
         "today_physics_support_score": null,
-        "weighted_physics_support_score": 0.374633492645884,
+        "weighted_physics_support_score": 0.2895704269442622,
         "persistence_score": 1.0,
         "stability_score": 1.0,
-        "temporal_confidence": 0.43999999999999995
+        "temporal_confidence": 0.52
       },
       {
         "rank": 9,
-        "lat": 5.624999999999998,
-        "lon": 97.54166666666666,
-        "temporal_memory_confidence_adjusted": 0.35846928863117833,
+        "lat": 2.8749999999999987,
+        "lon": 95.45833333333333,
+        "temporal_memory_confidence_adjusted": 0.4659329918615897,
         "today_physics_support_score": null,
-        "weighted_physics_support_score": 0.34341932490905974,
+        "weighted_physics_support_score": 0.2827293018785199,
         "persistence_score": 1.0,
         "stability_score": 1.0,
-        "temporal_confidence": 0.43999999999999995
+        "temporal_confidence": 0.52
       },
       {
         "rank": 10,
-        "lat": 5.624999999999998,
-        "lon": 97.45833333333333,
-        "temporal_memory_confidence_adjusted": 0.3561832021911106,
+        "lat": 6.124999999999998,
+        "lon": 97.70833333333333,
+        "temporal_memory_confidence_adjusted": 0.46370170086954166,
         "today_physics_support_score": null,
-        "weighted_physics_support_score": 0.3334346706460106,
+        "weighted_physics_support_score": 0.27552228963030273,
         "persistence_score": 1.0,
         "stability_score": 1.0,
-        "temporal_confidence": 0.43999999999999995
+        "temporal_confidence": 0.52
       }
     ]
   },
