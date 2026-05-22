@@ -27,6 +27,7 @@ PHYSICS = Path(
     "data/physics/fgi_physics_support_today.json"
 )
 PHYSICS_NC = Path("data/physics/fgi_physics_support_today.nc")
+FIELD_LEARNING = Path("data/field_learning/field_learning.json")
 
 
 def load_signals_today() -> dict:
@@ -199,6 +200,19 @@ def build_rank_summary(rankings: list[dict]) -> str:
         if r.get("fgi_source") == "regional_estimate"
     )
 
+    learning_ports = sum(
+        1 for r in rankings
+        if r.get("field_learning",{}).get("available")
+    )
+
+    trip_ports = sum(
+        1 for r in rankings
+        if (
+            r.get("field_learning",{})
+            .get("trip_count",0)
+        ) > 0
+    )
+
     risk_levels = [
         r.get("risk_level")
         for r in rankings
@@ -206,7 +220,10 @@ def build_rank_summary(rankings: list[dict]) -> str:
     ]
 
     dominant_risk = (
-        max(set(risk_levels), key=risk_levels.count)
+        max(
+            set(risk_levels),
+            key=risk_levels.count
+        )
         if risk_levels
         else "tidak tersedia"
     )
@@ -214,13 +231,19 @@ def build_rank_summary(rankings: list[dict]) -> str:
     top = rankings[0]
 
     return (
-        f"Hari ini {local_count} dari {total} pelabuhan sudah memiliki "
-        f"estimasi lokal berbasis grid NetCDF, sementara {regional_count} "
-        f"pelabuhan masih memakai estimasi regional. Risiko umum terbaca "
-        f"{dominant_risk}. Pelabuhan dengan ranking tertinggi saat ini "
-        f"{top['port']} dengan ranking score {top['ranking_score']:.1f}. "
-        f"Gunakan ranking ini sebagai panduan awal bersama validasi nelayan "
-        f"dan pemantauan cuaca terbaru."
+        f"Hari ini {local_count} dari {total} "
+        f"pelabuhan sudah memiliki estimasi lokal, "
+        f"sementara {regional_count} masih regional. "
+        f"Risiko umum terbaca {dominant_risk}. "
+        f"Sistem pembelajaran lapangan tersedia pada "
+        f"{learning_ports} pelabuhan dan "
+        f"{trip_ports} pelabuhan sudah memiliki "
+        f"data trip validasi. "
+        f"Pelabuhan dengan ranking tertinggi saat ini "
+        f"{top['port']} "
+        f"(skor {top['calibrated_ranking_score']:.1f}). "
+        f"Gunakan hasil ini sebagai pendamping "
+        f"pengalaman nelayan dan kondisi cuaca terbaru."
     )
 
 def local_physics_from_nc(
@@ -445,6 +468,317 @@ def readiness_status_from_coverage(coverage: dict) -> str:
 
     return "limited"
 
+def load_field_learning(port_id: str) -> dict:
+    if not FIELD_LEARNING.exists():
+        return {
+            "available": False,
+            "calibration_factor": 1.0,
+            "learning_status": "belum tersedia",
+        }
+
+    try:
+        data = json.loads(FIELD_LEARNING.read_text(encoding="utf-8"))
+    except Exception:
+        return {
+            "available": False,
+            "calibration_factor": 1.0,
+            "learning_status": "gagal dibaca",
+        }
+
+    for p in data.get("ports", []):
+        if p.get("port_id") == port_id:
+            return {
+                "available": True,
+                **p,
+            }
+
+    return {
+        "available": False,
+        "port_id": port_id,
+        "calibration_factor": 1.0,
+        "learning_status": "baru",
+    }
+
+def build_learning_coverage(rankings: list[dict]) -> dict:
+    total = len(rankings)
+
+    with_memory = sum(
+        1 for r in rankings
+        if r.get("field_learning", {}).get("available") is True
+    )
+
+    with_trip_data = sum(
+        1 for r in rankings
+        if (r.get("field_learning", {}).get("trip_count") or 0) > 0
+    )
+
+    return {
+        "total_ports": total,
+        "ports_with_learning_memory": with_memory,
+        "ports_without_learning_memory": total - with_memory,
+        "ports_with_trip_data": with_trip_data,
+    }
+
+def learning_note_message(
+    trip_count: int,
+    learning_strength: float,
+) -> str:
+    if trip_count <= 0:
+        return (
+            "Belum ada data trip lapangan, sehingga ranking belum dikalibrasi "
+            "oleh pengalaman nelayan."
+        )
+
+    if learning_strength < 0.25:
+        return (
+            "Koreksi lapangan masih lemah karena jumlah trip validasi masih sedikit."
+        )
+
+    if learning_strength < 0.75:
+        return (
+            "Koreksi lapangan mulai cukup bermakna, namun masih perlu tambahan trip."
+        )
+
+    return (
+        "Koreksi lapangan sudah kuat karena jumlah trip validasi cukup banyak."
+    )
+
+def estimate_income(
+    field_learning: dict,
+    estimated_trip_cost_idr: int,
+    default_price_idr_per_kg: int = 28000,
+) -> dict:
+    catch_kg = field_learning.get("mean_catch_kg")
+    trip_count = field_learning.get("trip_count", 0)
+    income_confidence = income_confidence_from_trip_count(trip_count)
+
+    if catch_kg is None:
+        return {
+            "available": False,
+            "message": "Belum ada data hasil tangkap rata-rata untuk estimasi pendapatan.",
+        }
+
+    gross_income = int(round(catch_kg * default_price_idr_per_kg))
+    net_income = int(round(gross_income - estimated_trip_cost_idr))
+    profit_label = profit_label_from_net_income(net_income)
+    income_advice = income_advice_message(
+        profit_label=profit_label,
+        income_confidence=income_confidence,
+    )
+
+    return {
+        "available": True,
+        "income_confidence": income_confidence,
+        "trip_count_basis": trip_count,   
+        "fish_type": "ikan campuran",
+        "estimated_catch_kg": catch_kg,
+        "price_idr_per_kg": default_price_idr_per_kg,
+        "gross_income_idr": gross_income,
+        "trip_cost_idr": estimated_trip_cost_idr,
+        "estimated_net_income_idr": net_income,
+        "profit_label": profit_label,
+        "income_advice": income_advice,
+    }
+
+def income_confidence_from_trip_count(trip_count: int | None) -> str:
+    trip_count = trip_count or 0
+
+    if trip_count >= 20:
+        return "tinggi"
+
+    if trip_count >= 5:
+        return "sedang"
+
+    if trip_count > 0:
+        return "rendah"
+
+    return "belum tersedia"
+
+def profit_label_from_net_income(net_income: int) -> str:
+    if net_income >= 1000000:
+        return "tinggi"
+
+    if net_income >= 500000:
+        return "sedang"
+
+    if net_income > 0:
+        return "rendah"
+
+    return "rugi/berisiko"
+
+def income_advice_message(
+    profit_label: str,
+    income_confidence: str,
+) -> str:
+    if income_confidence in ["belum tersedia", None]:
+        return (
+            "Belum tersedia data pendapatan yang cukup untuk memberi saran ekonomi."
+        )
+
+    if profit_label == "tinggi" and income_confidence == "rendah":
+        return (
+            "Potensi pendapatan bersih terlihat tinggi, tetapi keyakinan masih rendah "
+            "karena basis trip validasi masih sedikit."
+        )
+
+    if profit_label == "tinggi":
+        return (
+            "Potensi pendapatan bersih terlihat tinggi dan layak dipertimbangkan "
+            "bersama kondisi laut serta kesiapan kapal."
+        )
+
+    if profit_label == "sedang":
+        return (
+            "Potensi pendapatan bersih berada pada tingkat sedang. Efisiensi BBM "
+            "dan harga jual ikan perlu diperhatikan."
+        )
+
+    if profit_label == "rendah":
+        return (
+            "Potensi pendapatan bersih masih rendah. Pertimbangkan efisiensi biaya, "
+            "waktu melaut, dan alternatif lokasi."
+        )
+
+    return (
+        "Potensi ekonomi berisiko rugi. Keputusan melaut perlu dipertimbangkan ulang."
+    )
+
+def build_income_coverage(rankings: list[dict]) -> dict:
+    total = len(rankings)
+
+    with_income = sum(
+        1 for r in rankings
+        if r.get("income_estimate", {}).get("available") is True
+    )
+
+    high_profit = sum(
+        1 for r in rankings
+        if r.get("income_estimate", {}).get("profit_label") == "tinggi"
+    )
+
+    medium_profit = sum(
+        1 for r in rankings
+        if r.get("income_estimate", {}).get("profit_label") == "sedang"
+    )
+
+    low_profit = sum(
+        1 for r in rankings
+        if r.get("income_estimate", {}).get("profit_label") == "rendah"
+    )
+
+    risky_profit = sum(
+        1 for r in rankings
+        if r.get("income_estimate", {}).get("profit_label") == "rugi/berisiko"
+    )
+
+    return {
+        "total_ports": total,
+        "ports_with_income_estimate": with_income,
+        "ports_without_income_estimate": total - with_income,
+        "high_profit_ports": high_profit,
+        "medium_profit_ports": medium_profit,
+        "low_profit_ports": low_profit,
+        "risky_profit_ports": risky_profit,
+    }
+
+def build_income_summary(income_coverage: dict) -> str:
+    total = income_coverage.get("total_ports", 0)
+    with_income = income_coverage.get("ports_with_income_estimate", 0)
+    without_income = income_coverage.get("ports_without_income_estimate", 0)
+    high = income_coverage.get("high_profit_ports", 0)
+    medium = income_coverage.get("medium_profit_ports", 0)
+    low = income_coverage.get("low_profit_ports", 0)
+    risky = income_coverage.get("risky_profit_ports", 0)
+
+    if total == 0:
+        return "Belum tersedia data pelabuhan untuk ringkasan pendapatan."
+
+    return (
+        f"Dari {total} pelabuhan, {with_income} sudah memiliki estimasi "
+        f"pendapatan berbasis data trip awal, sementara {without_income} "
+        f"belum memiliki data hasil tangkap yang cukup. Saat ini terdapat "
+        f"{high} pelabuhan dengan potensi profit tinggi, {medium} sedang, "
+        f"{low} rendah, dan {risky} berisiko rugi. Estimasi pendapatan masih "
+        f"perlu dibaca hati-hati karena basis validasi lapangan masih awal."
+    )
+
+def income_readiness_status_from_coverage(
+    income_coverage: dict,
+    learning_coverage: dict,
+) -> str:
+    total = income_coverage.get("total_ports", 0)
+    with_income = income_coverage.get("ports_with_income_estimate", 0)
+    with_trip = learning_coverage.get("ports_with_trip_data", 0)
+
+    if total == 0:
+        return "limited"
+
+    income_ratio = with_income / total
+    trip_ratio = with_trip / total
+
+    if income_ratio >= 0.75 and trip_ratio >= 0.75:
+        return "ready"
+
+    if income_ratio >= 0.5 and trip_ratio >= 0.5:
+        return "early_validation"
+
+    return "limited"
+
+def build_operational_recommendation(
+    readiness_status: str,
+    income_readiness_status: str,
+    rankings: list[dict],
+) -> str:
+    if not rankings:
+        return "Belum tersedia data untuk rekomendasi operasional."
+
+    top = rankings[0]
+
+    if readiness_status == "caution" or income_readiness_status == "early_validation":
+        return (
+            f"Rekomendasi hari ini bersifat hati-hati. {top['port']} memiliki "
+            f"skor terkalibrasi tertinggi ({top['calibrated_ranking_score']:.1f}), "
+            f"namun keputusan tetap perlu mempertimbangkan cuaca terbaru, kesiapan "
+            f"kapal, BBM, dan validasi nelayan setempat."
+        )
+
+    if readiness_status == "ready" and income_readiness_status == "ready":
+        return (
+            f"{top['port']} dapat menjadi prioritas awal berdasarkan kombinasi "
+            f"data laut, grid lokal, pembelajaran lapangan, dan estimasi pendapatan."
+        )
+
+    return (
+        "Rekomendasi masih terbatas. Gunakan hasil ini sebagai bahan diskusi "
+        "awal bersama nelayan, Panglima Laot, dan pengelola pelabuhan."
+    )
+
+def build_dashboard_payload(
+    rankings: list[dict],
+    readiness_status: str,
+    income_readiness_status: str,
+    operational_recommendation: str,
+) -> dict:
+    if not rankings:
+        return {
+            "headline": "Belum tersedia data ekonomi nelayan hari ini.",
+            "top_port": None,
+            "status_badge": "limited",
+            "income_badge": "limited",
+        }
+
+    top = rankings[0]
+
+    return {
+        "headline": "Fisher Economy Intelligence hari ini tersedia sebagai pendamping keputusan awal.",
+        "top_port": top.get("port"),
+        "top_port_id": top.get("port_id"),
+        "top_score": top.get("calibrated_ranking_score"),
+        "status_badge": readiness_status,
+        "income_badge": income_readiness_status,
+        "recommendation": operational_recommendation,
+    }
+
 
 @router.get("/economic/ports/rank")
 def economic_ports_rank():
@@ -546,6 +880,45 @@ def economic_ports_rank():
            ranking_confidence=ranking_confidence,
            ranking_score=ranking_score,
         )
+        
+        field_learning = load_field_learning(p.get("id"))
+
+        calibration_factor = field_learning.get(
+            "calibration_factor",
+            1.0
+        )
+
+        income_estimate = estimate_income(
+            field_learning=field_learning,
+            estimated_trip_cost_idr=estimated_trip_cost_idr,
+        )
+
+
+        trip_count = field_learning.get(
+            "trip_count",
+            0
+        )
+
+        learning_strength = min(
+            1.0,
+            trip_count / 20.0
+        )
+
+        effective_calibration = (
+            1.0 +
+            (
+                (calibration_factor - 1.0)
+                * learning_strength
+            )
+        )
+        learning_note = learning_note_message(
+            trip_count=trip_count,
+            learning_strength=learning_strength,
+        )
+        calibrated_ranking_score = round(
+            ranking_score * effective_calibration,
+            1,
+        )
 
         rankings.append({
             "port_id": p.get("id"),
@@ -571,6 +944,19 @@ def economic_ports_rank():
             "ranking_confidence": ranking_confidence,
             "port_advice": port_advice,
             "ranking_note": ranking_note,
+            "calibrated_ranking_score": calibrated_ranking_score,
+            "field_learning": field_learning,
+            "learning_note": learning_note,
+            "income_estimate": income_estimate,  
+            "learning_strength": round(
+                learning_strength,
+                2
+             ),
+
+             "effective_calibration": round(
+                effective_calibration,
+                3
+             ),
             "source": {
                 "wave_m": wave_m,
                 "wind_ms": wind_ms,
@@ -580,22 +966,65 @@ def economic_ports_rank():
 
     rankings = sorted(
         rankings,
-        key=lambda x: x["ranking_score"],
+        key=lambda x: x["calibrated_ranking_score"],
         reverse=True,
     )
 
     summary = build_rank_summary(rankings)
     coverage = build_coverage_summary(rankings)
+    learning_coverage = build_learning_coverage(rankings)
+    income_coverage = build_income_coverage(rankings)
+    income_summary = build_income_summary(income_coverage)
+
     readiness_status = readiness_status_from_coverage(coverage)
 
+    income_readiness_status = income_readiness_status_from_coverage(
+       income_coverage=income_coverage,
+       learning_coverage=learning_coverage,
+    )
+
+    operational_recommendation = build_operational_recommendation(
+       readiness_status=readiness_status,
+       income_readiness_status=income_readiness_status,
+       rankings=rankings,
+    )
+    
+    dashboard = build_dashboard_payload(
+       rankings=rankings,
+       readiness_status=readiness_status,
+       income_readiness_status=income_readiness_status,
+       operational_recommendation=operational_recommendation,
+    )
+
     return {
-        "version": "2.9",
-        "count": len(rankings),
-        "summary": summary,
-        "coverage": coverage,
-        "readiness_status": readiness_status,
-        "ports": rankings,
-    }
+         "version": "5.0",
+         "module": "NELAYA-AI Economic Intelligence Layer",
+         "mvp_name": "Fisher Economy Intelligence MVP",
+         "mission": (
+              "Membantu nelayan kecil membaca peluang ekonomi melaut secara lebih "
+              "efisien, hati-hati, dan berbasis data yang tetap divalidasi oleh "
+              "pengalaman lapangan."
+         ),
+         "ranking_basis": "calibrated_ranking_score",
+         "production_status": "mvp_validation",
+         "allowed_use": "decision_support_only",
+         "count": len(rankings),
+         "summary": summary,
+         "readiness_status": readiness_status,
+         "coverage": coverage,
+         "learning_coverage": learning_coverage,
+         "income_coverage": income_coverage,
+         "income_summary": income_summary,
+         "income_readiness_status": income_readiness_status,
+         "operational_recommendation": operational_recommendation,
+         "dashboard": dashboard,          
+         "scientific_caution": (
+             "Estimasi ini adalah alat bantu keputusan awal berbasis data laut, "
+             "grid fisika, validasi lapangan, dan asumsi ekonomi sederhana. "
+             "Hasil tidak boleh dibaca sebagai kepastian tangkapan atau pendapatan."
+         ),
+         "ports": rankings,
+      }
 
 @router.get("/economic/today")
 def economic_today(port: str = Query("tpi_lampulo")):
