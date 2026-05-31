@@ -18,7 +18,7 @@ mkdir -p "$LOG_DIR"
 
 {
   echo "============================================================"
-  echo "NELAYA-AI Tuna Depth v0.8.2 Daily Pipeline"
+  echo "NELAYA-AI Tuna Depth v0.8.3 Daily Pipeline"
   echo "Started: $(date -Is)"
   echo "============================================================"
 
@@ -43,7 +43,11 @@ mkdir -p "$LOG_DIR"
   "$PY" scripts/build_ssh_front_diagnostics.py --date "$SNAP_DATE" || true
 
   echo ""
-  echo "=== 4. Build Tuna Depth Current + Thermal Gate + SSH/front Gate ==="
+  echo "=== Build Safety Gate diagnostics/map ==="
+  "$PY" scripts/build_safety_gate_diagnostics.py --date "$SNAP_DATE" || true
+
+  echo ""
+  echo "=== 4. Build Tuna Depth Current + Thermal Gate + SSH/front Gate + Safety Gate ==="
   "$PY" scripts/build_tuna_depth_current_analysis.py \
     --geojson-threshold 0.72 \
     --max-points 500

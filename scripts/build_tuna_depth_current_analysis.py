@@ -949,11 +949,13 @@ def make_geojson(
     clustered_candidates: list[dict[str, Any]] | None = None,
     thermal_maps: dict[str, np.ndarray] | None = None,
     ssh_maps: dict[str, np.ndarray] | None = None,
+    safety_maps: dict[str, np.ndarray] | None = None,
 ):
     rows = []
     vertical_maps = vertical_maps or {}
     thermal_maps = thermal_maps or {}
     ssh_maps = ssh_maps or {}
+    safety_maps = safety_maps or {}
 
     coh_map = vertical_maps.get("directional_coherence")
     shear_map = vertical_maps.get("vertical_shear_per_m")
@@ -962,6 +964,10 @@ def make_geojson(
     temp_map = thermal_maps.get("temperature_mean_30_100_c")
     ssh_front_map = ssh_maps.get("ssh_front_score")
     ssh_grad_map = ssh_maps.get("ssh_gradient_m_per_m")
+    safety_score_map = safety_maps.get("safety_score")
+    risk_score_map = safety_maps.get("combined_risk_score")
+    wave_map = safety_maps.get("wave_m")
+    wind_map = safety_maps.get("wind_speed_ms")
 
     for i in range(score.shape[0]):
         for j in range(score.shape[1]):
@@ -979,6 +985,11 @@ def make_geojson(
             ssh_grad = safe_float(ssh_grad_map[i, j]) if ssh_grad_map is not None else None
             habitat_score = habitat_score_v080(sc, thermal_score, coherence)
             habitat_score_082 = habitat_score_v082(sc, thermal_score, coherence, ssh_front)
+            safety_score = safe_float(safety_score_map[i, j]) if safety_score_map is not None else None
+            risk_score = safe_float(risk_score_map[i, j]) if risk_score_map is not None else None
+            wave_val = safe_float(wave_map[i, j]) if wave_map is not None else None
+            wind_val = safe_float(wind_map[i, j]) if wind_map is not None else None
+            operational_score = operational_habitat_score_v083(habitat_score_082, safety_score)
 
             rows.append(
                 {
@@ -994,13 +1005,18 @@ def make_geojson(
                     "habitat_score_v082": habitat_score_082,
                     "ssh_front_score": ssh_front,
                     "ssh_gradient_m_per_m": ssh_grad,
+                    "safety_score": safety_score,
+                    "combined_risk_score": risk_score,
+                    "wave_m": wave_val,
+                    "wind_speed_ms": wind_val,
+                    "operational_habitat_score_v083": operational_score,
                 }
             )
 
     rows = sorted(
         rows,
         key=lambda r: (
-            r["habitat_score_v082"] if r.get("habitat_score_v082") is not None else (r["habitat_score_v080"] if r["habitat_score_v080"] is not None else r["score"])
+            r["operational_habitat_score_v083"] if r.get("operational_habitat_score_v083") is not None else (r["habitat_score_v082"] if r.get("habitat_score_v082") is not None else (r["habitat_score_v080"] if r["habitat_score_v080"] is not None else r["score"]))
         ),
         reverse=True,
     )[:max_points]
@@ -1020,6 +1036,11 @@ def make_geojson(
                     "habitat_score_v082": r.get("habitat_score_v082"),
                     "ssh_front_score": r.get("ssh_front_score"),
                     "ssh_gradient_m_per_m": r.get("ssh_gradient_m_per_m"),
+                    "safety_score": r.get("safety_score"),
+                    "combined_risk_score": r.get("combined_risk_score"),
+                    "wave_m": r.get("wave_m"),
+                    "wind_speed_ms": r.get("wind_speed_ms"),
+                    "operational_habitat_score_v083": r.get("operational_habitat_score_v083"),
                     "speed_ms": r["speed_ms"],
                     "directional_coherence": r["directional_coherence"],
                     "vertical_shear_per_m": r["vertical_shear_per_m"],
@@ -1046,6 +1067,15 @@ def make_geojson(
                         if r.get("ssh_front_score") is not None
                         else "SSH/front support belum tersedia untuk titik ini."
                     ),
+                    "safety_reason": (
+                        f"Safety Gate terbaca {r.get('safety_score'):.2f}; gelombang sekitar {r.get('wave_m'):.2f} m dan angin sekitar {r.get('wind_speed_ms'):.2f} m/s."
+                        if r.get("safety_score") is not None and r.get("wave_m") is not None and r.get("wind_speed_ms") is not None
+                        else (
+                            f"Safety Gate terbaca {r.get('safety_score'):.2f}; gelombang sekitar {r.get('wave_m'):.2f} m. Data angin lokal titik ini belum lengkap."
+                            if r.get("safety_score") is not None and r.get("wave_m") is not None
+                            else "Safety Gate belum lengkap untuk titik ini."
+                        )
+                    ),
                     "scientific_caution": (
                         "Probabilistic current-depth and thermal signal, not a fish-location guarantee. "
                         "Read together with SST, CHL, SSH/front, bathymetry, FGI, weather, safety, and fisher knowledge."
@@ -1057,7 +1087,7 @@ def make_geojson(
     geojson = {
         "type": "FeatureCollection",
         "name": "NELAYA-AI Tuna Depth Current Candidates",
-        "version": "0.8.2-alpha.1",
+        "version": "0.8.3-alpha.1",
         "features": features,
     }
 
@@ -1072,6 +1102,7 @@ def make_geojson(
         "cluster_count": len(clustered_candidates or []),
         "thermal_aware": thermal_score_map is not None or temp_map is not None,
         "ssh_front_aware": ssh_front_map is not None,
+        "safety_aware": safety_score_map is not None,
     }
 
 
@@ -1324,7 +1355,7 @@ def build_thermal_diagnostics(
     if not diag_path.exists() or not map_path.exists():
         return {
             "status": "missing",
-            "version": "0.8.2-alpha.1",
+            "version": "0.8.3-alpha.1",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": "Thermal diagnostics/map belum dibangun; jalankan scripts/build_thermal_depth_diagnostics.py lebih dulu.",
@@ -1336,7 +1367,7 @@ def build_thermal_diagnostics(
         if diag.get("snapshot_date") != date:
             return {
                 "status": "stale",
-                "version": "0.8.2-alpha.1",
+                "version": "0.8.3-alpha.1",
                 "snapshot_date": diag.get("snapshot_date"),
                 "expected_date": date,
                 "source_file": diag.get("source_file"),
@@ -1377,7 +1408,7 @@ def build_thermal_diagnostics(
     except Exception as exc:
         return {
             "status": "error",
-            "version": "0.8.2-alpha.1",
+            "version": "0.8.3-alpha.1",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": f"Gagal membaca thermal diagnostics/map: {type(exc).__name__}: {exc}",
@@ -1409,7 +1440,7 @@ def build_ssh_front_diagnostics(
     if not diag_path.exists() or not map_path.exists():
         return {
             "status": "missing",
-            "version": "0.8.2-alpha.1",
+            "version": "0.8.3-alpha.1",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": "SSH/front diagnostics/map belum dibangun.",
@@ -1421,7 +1452,7 @@ def build_ssh_front_diagnostics(
         if diag.get("snapshot_date") != date:
             return {
                 "status": "stale",
-                "version": "0.8.2-alpha.1",
+                "version": "0.8.3-alpha.1",
                 "snapshot_date": diag.get("snapshot_date"),
                 "expected_date": date,
                 "source_file": diag.get("source_file"),
@@ -1464,7 +1495,7 @@ def build_ssh_front_diagnostics(
     except Exception as exc:
         return {
             "status": "error",
-            "version": "0.8.2-alpha.1",
+            "version": "0.8.3-alpha.1",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": f"Gagal membaca SSH/front diagnostics/map: {type(exc).__name__}: {exc}",
@@ -1623,6 +1654,257 @@ def enrich_clustered_candidates_with_ssh_front(
     return enriched
 
 
+
+def build_safety_gate_diagnostics(
+    date: str,
+    current_lat: np.ndarray,
+    current_lon: np.ndarray,
+) -> tuple[dict[str, Any], dict[str, np.ndarray]]:
+    """
+    Optional v0.8.3 Safety Gate layer.
+
+    Reads prebuilt safety diagnostics from:
+    - data/physics/safety_gate_diagnostics_today.json
+    - data/physics/safety_gate_maps_today.npz
+    """
+    diag_path = OUT_DIR / "safety_gate_diagnostics_today.json"
+    map_path = OUT_DIR / "safety_gate_maps_today.npz"
+
+    empty = {
+        "safety_score": np.full((len(current_lat), len(current_lon)), np.nan, dtype=float),
+        "combined_risk_score": np.full((len(current_lat), len(current_lon)), np.nan, dtype=float),
+        "wave_m": np.full((len(current_lat), len(current_lon)), np.nan, dtype=float),
+        "wind_speed_ms": np.full((len(current_lat), len(current_lon)), np.nan, dtype=float),
+    }
+
+    if not diag_path.exists() or not map_path.exists():
+        return {
+            "status": "missing",
+            "version": "0.8.3-alpha.1",
+            "source_file": str(diag_path),
+            "map_file": str(map_path),
+            "message": "Safety Gate diagnostics/map belum dibangun.",
+        }, empty
+
+    try:
+        diag = json.loads(diag_path.read_text(encoding="utf-8"))
+
+        if diag.get("snapshot_date") != date:
+            return {
+                "status": "stale",
+                "version": "0.8.3-alpha.1",
+                "snapshot_date": diag.get("snapshot_date"),
+                "expected_date": date,
+                "source_file": str(diag_path),
+                "map_file": str(map_path),
+                "message": "Safety Gate tersedia tetapi tanggal snapshot berbeda.",
+            }, empty
+
+        maps_npz = np.load(map_path)
+        s_lat = np.asarray(maps_npz["lat"], dtype=float)
+        s_lon = np.asarray(maps_npz["lon"], dtype=float)
+
+        safety_score = np.asarray(maps_npz["safety_score"], dtype=float)
+        combined_risk = np.asarray(maps_npz["combined_risk_score"], dtype=float)
+        wave_m = np.asarray(maps_npz["wave_m"], dtype=float)
+        wind_speed_ms = np.asarray(maps_npz["wind_speed_ms"], dtype=float)
+
+        if len(s_lat) != len(current_lat) or len(s_lon) != len(current_lon):
+            diag = dict(diag)
+            diag.update({
+                "status": "grid_mismatch",
+                "safety_grid_shape": {
+                    "lat": int(len(s_lat)),
+                    "lon": int(len(s_lon)),
+                },
+                "current_grid_shape": {
+                    "lat": int(len(current_lat)),
+                    "lon": int(len(current_lon)),
+                },
+                "message": "Grid Safety Gate tidak sama dengan current grid.",
+            })
+            return diag, empty
+
+        diag = dict(diag)
+        diag["status"] = "ready"
+
+        return diag, {
+            "safety_score": safety_score,
+            "combined_risk_score": combined_risk,
+            "wave_m": wave_m,
+            "wind_speed_ms": wind_speed_ms,
+        }
+
+    except Exception as exc:
+        return {
+            "status": "error",
+            "version": "0.8.3-alpha.1",
+            "source_file": str(diag_path),
+            "map_file": str(map_path),
+            "message": f"Gagal membaca Safety Gate diagnostics/map: {type(exc).__name__}: {exc}",
+        }, empty
+
+
+def operational_habitat_score_v083(
+    habitat_score_v082_value: float | None,
+    safety_score_value: float | None,
+) -> float | None:
+    """
+    v0.8.3 operational habitat score.
+
+    This is not a fish guarantee and not a sailing guarantee.
+    It tempers habitat opportunity with small-fisher safety gate.
+    """
+    h = safe_float(habitat_score_v082_value)
+    s = safe_float(safety_score_value)
+
+    if h is None:
+        return None
+
+    if s is None:
+        # Missing safety should reduce confidence gently, not erase habitat signal.
+        s = 0.50
+
+    return round(clip01(h * s), 6)
+
+
+def enrich_clustered_candidates_with_safety_gate(
+    lat: np.ndarray,
+    lon: np.ndarray,
+    score: np.ndarray,
+    vertical_maps: dict[str, np.ndarray] | None,
+    thermal_maps: dict[str, np.ndarray] | None,
+    ssh_maps: dict[str, np.ndarray] | None,
+    safety_maps: dict[str, np.ndarray] | None,
+    clustered_candidates: list[dict[str, Any]],
+    threshold: float,
+    default_radius_km: float = 35.0,
+) -> list[dict[str, Any]]:
+    """
+    Add Safety Gate summaries and operational score to each cluster.
+    """
+    if not clustered_candidates:
+        return clustered_candidates
+
+    vertical_maps = vertical_maps or {}
+    thermal_maps = thermal_maps or {}
+    ssh_maps = ssh_maps or {}
+    safety_maps = safety_maps or {}
+
+    safety_map = safety_maps.get("safety_score")
+    risk_map = safety_maps.get("combined_risk_score")
+    wave_map = safety_maps.get("wave_m")
+    wind_map = safety_maps.get("wind_speed_ms")
+
+    if safety_map is None:
+        for c in clustered_candidates:
+            c["safety_gate_status"] = "missing"
+            c["operational_habitat_score_v083_mean"] = operational_habitat_score_v083(
+                c.get("habitat_score_v082_mean"),
+                None,
+            )
+        return clustered_candidates
+
+    lon2d, lat2d = np.meshgrid(lon, lat)
+    enriched = []
+
+    for c in clustered_candidates:
+        clat = safe_float(c.get("centroid_lat"))
+        clon = safe_float(c.get("centroid_lon"))
+
+        if clat is None or clon is None:
+            enriched.append(c)
+            continue
+
+        radius = safe_float(c.get("radius_km_est"), default_radius_km) or default_radius_km
+        radius = max(default_radius_km, radius)
+
+        km_y = (lat2d - clat) * 111.0
+        km_x = (lon2d - clon) * 111.0 * math.cos(math.radians(clat))
+        dist = np.sqrt(km_x ** 2 + km_y ** 2)
+        mask = (dist <= radius) & np.isfinite(score) & (score >= threshold)
+
+        def masked_mean(m):
+            if m is None:
+                return None
+            vals = np.asarray(m, dtype=float)[mask]
+            vals = vals[np.isfinite(vals)]
+            return safe_float(np.nanmean(vals)) if vals.size else None
+
+        mean_safety = masked_mean(safety_map)
+        mean_risk = masked_mean(risk_map)
+        mean_wave = masked_mean(wave_map)
+        mean_wind = masked_mean(wind_map)
+
+        operational_vals = []
+        if np.any(mask):
+            rows, cols = np.where(mask)
+            for ii, jj in zip(rows, cols):
+                hs082 = habitat_score_v082(
+                    safe_float(score[ii, jj]),
+                    safe_float(thermal_maps.get("thermal_score")[ii, jj]) if thermal_maps.get("thermal_score") is not None else None,
+                    safe_float(vertical_maps.get("directional_coherence")[ii, jj]) if vertical_maps.get("directional_coherence") is not None else None,
+                    safe_float(ssh_maps.get("ssh_front_score")[ii, jj]) if ssh_maps.get("ssh_front_score") is not None else None,
+                )
+                op = operational_habitat_score_v083(
+                    hs082,
+                    safe_float(safety_map[ii, jj]),
+                )
+                if op is not None:
+                    operational_vals.append(op)
+
+        mean_operational = safe_float(np.nanmean(operational_vals)) if operational_vals else operational_habitat_score_v083(
+            c.get("habitat_score_v082_mean"),
+            mean_safety,
+        )
+
+        top_lat = safe_float(c.get("top_lat"))
+        top_lon = safe_float(c.get("top_lon"))
+
+        top_safety = None
+        top_risk = None
+        top_wave = None
+        top_wind = None
+        top_operational = None
+
+        if top_lat is not None and top_lon is not None:
+            ii = int(np.nanargmin(np.abs(lat - top_lat)))
+            jj = int(np.nanargmin(np.abs(lon - top_lon)))
+
+            top_safety = safe_float(safety_map[ii, jj])
+            top_risk = safe_float(risk_map[ii, jj]) if risk_map is not None else None
+            top_wave = safe_float(wave_map[ii, jj]) if wave_map is not None else None
+            top_wind = safe_float(wind_map[ii, jj]) if wind_map is not None else None
+
+            top_operational = operational_habitat_score_v083(
+                c.get("top_habitat_score_v082"),
+                top_safety,
+            )
+
+        c = dict(c)
+        c.update({
+            "safety_gate_status": "ready" if mean_safety is not None else "missing",
+            "mean_safety_score": mean_safety,
+            "mean_combined_risk_score": mean_risk,
+            "mean_wave_m": mean_wave,
+            "mean_wind_speed_ms": mean_wind,
+            "operational_habitat_score_v083_mean": mean_operational,
+            "top_safety_score": top_safety,
+            "top_combined_risk_score": top_risk,
+            "top_wave_m": top_wave,
+            "top_wind_speed_ms": top_wind,
+            "top_operational_habitat_score_v083": top_operational,
+            "interpretation": (
+                "Klaster kandidat koridor 30–100 m yang dibaca bersama arus, thermal gate, "
+                "SSH/front support, dan Safety Gate. Peluang oseanografi tidak boleh dibaca "
+                "terpisah dari gelombang, angin, keselamatan, regulasi, dan pengalaman nelayan."
+            ),
+        })
+        enriched.append(c)
+
+    return enriched
+
+
 def make_dashboard_png(
     out_png: Path,
     date: str,
@@ -1650,7 +1932,7 @@ def make_dashboard_png(
     gs = fig.add_gridspec(2, 2, width_ratios=[0.95, 1.45], height_ratios=[1, 1], wspace=0.28, hspace=0.34)
 
     fig.suptitle(
-        f"NELAYA-AI — Tuna Depth Current Layer v0.8.2-alpha.1\nPerairan Aceh · Copernicus CMEMS · {date}",
+        f"NELAYA-AI — Tuna Depth Current Layer v0.8.3-alpha.1\nPerairan Aceh · Copernicus CMEMS · {date}",
         fontsize=14,
         fontweight="bold",
         y=0.98,
@@ -1812,7 +2094,7 @@ def main():
     date = extract_date(f) or args.date or datetime.now(ZoneInfo("Asia/Jakarta")).strftime("%Y-%m-%d")
 
     print("=" * 78)
-    print("NELAYA-AI Tuna Depth Current Analysis v0.8.2")
+    print("NELAYA-AI Tuna Depth Current Analysis v0.8.3")
     print("=" * 78)
     print(f"Input : {f}")
     print(f"Date  : {date}")
@@ -1837,6 +2119,11 @@ def main():
         current_lon=lon,
     )
     ssh_front_diagnostics, ssh_maps = build_ssh_front_diagnostics(
+        date=date,
+        current_lat=lat,
+        current_lon=lon,
+    )
+    safety_gate_diagnostics, safety_maps = build_safety_gate_diagnostics(
         date=date,
         current_lat=lat,
         current_lon=lon,
@@ -1891,6 +2178,18 @@ def main():
         threshold=args.geojson_threshold,
         default_radius_km=35.0,
     )
+    clustered_candidates = enrich_clustered_candidates_with_safety_gate(
+        lat=lat,
+        lon=lon,
+        score=candidate_rank_score,
+        vertical_maps=vertical_maps,
+        thermal_maps=thermal_maps,
+        ssh_maps=ssh_maps,
+        safety_maps=safety_maps,
+        clustered_candidates=clustered_candidates,
+        threshold=args.geojson_threshold,
+        default_radius_km=35.0,
+    )
 
     layer_summary = {}
     for k, item in layers.items():
@@ -1928,11 +2227,12 @@ def main():
                    clustered_candidates=clustered_candidates,
                    thermal_maps=thermal_maps,
                    ssh_maps=ssh_maps,
+                   safety_maps=safety_maps,
           )
 
     summary = {
         "module": "nelaya_ai_tuna_depth_current_analysis",
-        "version": "0.8.2-alpha.1",
+        "version": "0.8.3-alpha.1",
         "status": "ready",
         "created_at": datetime.now(ZoneInfo("Asia/Jakarta")).isoformat(),
         "snapshot_date": date,
@@ -1951,6 +2251,7 @@ def main():
         "vertical_diagnostics": vertical_diagnostics,
         "thermal_diagnostics": thermal_diagnostics,
         "ssh_front_diagnostics": ssh_front_diagnostics,
+        "safety_gate_diagnostics": safety_gate_diagnostics,
         "confidence_breakdown": confidence_breakdown,
         "clustered_candidates": clustered_candidates,
         "layers": layer_summary,

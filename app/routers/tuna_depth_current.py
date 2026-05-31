@@ -69,6 +69,7 @@ def health():
         payload["confidence_breakdown"] = data.get("confidence_breakdown")
         payload["thermal_diagnostics"] = data.get("thermal_diagnostics")
         payload["ssh_front_diagnostics"] = data.get("ssh_front_diagnostics")
+        payload["safety_gate_diagnostics"] = data.get("safety_gate_diagnostics")
         payload["audit"] = data.get("audit")
 
     return payload
@@ -106,6 +107,7 @@ def summary():
             "vertical_diagnostics": data.get("vertical_diagnostics"),
             "thermal_diagnostics": data.get("thermal_diagnostics"),
             "ssh_front_diagnostics": data.get("ssh_front_diagnostics"),
+            "safety_gate_diagnostics": data.get("safety_gate_diagnostics"),
             "confidence_breakdown": data.get("confidence_breakdown"),
             "clustered_candidates": data.get("clustered_candidates"),
             "layers": data.get("layers"),
