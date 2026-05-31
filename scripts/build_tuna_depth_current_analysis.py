@@ -1109,7 +1109,7 @@ def make_geojson(
     geojson = {
         "type": "FeatureCollection",
         "name": "NELAYA-AI Tuna Depth Current Candidates",
-        "version": "0.9.0-beta.1",
+        "version": "1.0.0-stable",
         "features": features,
     }
 
@@ -1377,7 +1377,7 @@ def build_thermal_diagnostics(
     if not diag_path.exists() or not map_path.exists():
         return {
             "status": "missing",
-            "version": "0.9.0-beta.1",
+            "version": "1.0.0-stable",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": "Thermal diagnostics/map belum dibangun; jalankan scripts/build_thermal_depth_diagnostics.py lebih dulu.",
@@ -1389,7 +1389,7 @@ def build_thermal_diagnostics(
         if diag.get("snapshot_date") != date:
             return {
                 "status": "stale",
-                "version": "0.9.0-beta.1",
+                "version": "1.0.0-stable",
                 "snapshot_date": diag.get("snapshot_date"),
                 "expected_date": date,
                 "source_file": diag.get("source_file"),
@@ -1430,7 +1430,7 @@ def build_thermal_diagnostics(
     except Exception as exc:
         return {
             "status": "error",
-            "version": "0.9.0-beta.1",
+            "version": "1.0.0-stable",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": f"Gagal membaca thermal diagnostics/map: {type(exc).__name__}: {exc}",
@@ -1462,7 +1462,7 @@ def build_ssh_front_diagnostics(
     if not diag_path.exists() or not map_path.exists():
         return {
             "status": "missing",
-            "version": "0.9.0-beta.1",
+            "version": "1.0.0-stable",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": "SSH/front diagnostics/map belum dibangun.",
@@ -1474,7 +1474,7 @@ def build_ssh_front_diagnostics(
         if diag.get("snapshot_date") != date:
             return {
                 "status": "stale",
-                "version": "0.9.0-beta.1",
+                "version": "1.0.0-stable",
                 "snapshot_date": diag.get("snapshot_date"),
                 "expected_date": date,
                 "source_file": diag.get("source_file"),
@@ -1517,7 +1517,7 @@ def build_ssh_front_diagnostics(
     except Exception as exc:
         return {
             "status": "error",
-            "version": "0.9.0-beta.1",
+            "version": "1.0.0-stable",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": f"Gagal membaca SSH/front diagnostics/map: {type(exc).__name__}: {exc}",
@@ -1702,7 +1702,7 @@ def build_safety_gate_diagnostics(
     if not diag_path.exists() or not map_path.exists():
         return {
             "status": "missing",
-            "version": "0.9.0-beta.1",
+            "version": "1.0.0-stable",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": "Safety Gate diagnostics/map belum dibangun.",
@@ -1714,7 +1714,7 @@ def build_safety_gate_diagnostics(
         if diag.get("snapshot_date") != date:
             return {
                 "status": "stale",
-                "version": "0.9.0-beta.1",
+                "version": "1.0.0-stable",
                 "snapshot_date": diag.get("snapshot_date"),
                 "expected_date": date,
                 "source_file": str(diag_path),
@@ -1760,7 +1760,7 @@ def build_safety_gate_diagnostics(
     except Exception as exc:
         return {
             "status": "error",
-            "version": "0.9.0-beta.1",
+            "version": "1.0.0-stable",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": f"Gagal membaca Safety Gate diagnostics/map: {type(exc).__name__}: {exc}",
@@ -2113,7 +2113,7 @@ def explain_cluster_v085(c: dict[str, Any]) -> dict[str, Any]:
     full = f"{positive_sentence} {caution_sentence} {decision_sentence}"
 
     return {
-        "version": "0.9.0-beta.1",
+        "version": "1.0.0-stable",
         "short": short,
         "full": full,
         "positive_factors": positives,
@@ -2166,7 +2166,7 @@ def explain_point_v085(r: dict[str, Any]) -> dict[str, Any]:
     detail = "Komponen terbaca: " + ", ".join(parts) + "." if parts else "Komponen detail belum lengkap."
 
     return {
-        "version": "0.9.0-beta.1",
+        "version": "1.0.0-stable",
         "short": short,
         "detail": detail,
         "caution": "Ini sinyal probabilistik untuk observasi, bukan klaim lokasi ikan atau jaminan keselamatan.",
@@ -2204,7 +2204,7 @@ def build_methodology_audit_v086(
     clustered_candidates = clustered_candidates or []
 
     return {
-        "version": "0.9.0-beta.1",
+        "version": "1.0.0-stable",
         "module": "tuna_depth_current",
         "snapshot_date": date,
         "method_position": (
@@ -2305,8 +2305,8 @@ def build_api_contract_v090(
     top_cluster = clustered_candidates[0] if clustered_candidates else {}
 
     return {
-        "version": "0.9.0-beta.1",
-        "contract_status": "beta_stable",
+        "version": "1.0.0-stable",
+        "contract_status": "stable",
         "module": "tuna_depth_current",
         "snapshot_date": date,
         "public_endpoint": "/api/v1/tuna-depth-current/summary",
@@ -2419,7 +2419,7 @@ def build_public_summary_v090(
     top_explanation = top_cluster.get("explanation_v085") or {}
 
     return {
-        "version": "0.9.0-beta.1",
+        "version": "1.0.0-stable",
         "snapshot_date": date,
         "module": "tuna_depth_current",
         "overall_confidence": confidence_breakdown.get("overall_confidence"),
@@ -2440,6 +2440,54 @@ def build_public_summary_v090(
             "Ini adalah pembacaan probabilistik untuk observasi dan edukasi. "
             "Bukan klaim lokasi ikan, bukan jaminan keselamatan, dan bukan perintah melaut."
         ),
+    }
+
+
+
+def build_release_status_v100(
+    date: str,
+    public_summary: dict[str, Any] | None,
+    api_contract: dict[str, Any] | None,
+    methodology_audit: dict[str, Any] | None,
+    confidence_breakdown: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """
+    v1.0.0 stable release marker.
+
+    This confirms that Tuna Depth Current has reached a stable public-readable
+    release while keeping the v0.9 API contract shape backward compatible.
+    """
+    public_summary = public_summary or {}
+    api_contract = api_contract or {}
+    methodology_audit = methodology_audit or {}
+    confidence_breakdown = confidence_breakdown or {}
+
+    return {
+        "version": "1.0.0-stable",
+        "release_name": "Tuna Depth Current Stable",
+        "module": "tuna_depth_current",
+        "snapshot_date": date,
+        "release_status": "stable",
+        "stability_note": (
+            "This v1.0 release keeps the v0.9 stable public API shape while adding a stable release marker. "
+            "Future features should add optional fields rather than rename existing stable fields."
+        ),
+        "core_stack": [
+            "current-depth corridor 30–100 m",
+            "thermal gate 30–100 m",
+            "SSH/front support",
+            "Safety Gate",
+            "operational decision label",
+            "explanation layer",
+            "methodology and audit layer",
+            "stable public summary",
+        ],
+        "public_reading": public_summary.get("top_decision_label"),
+        "public_caution": public_summary.get("public_caution"),
+        "api_contract_status": api_contract.get("contract_status") or "stable",
+        "overall_confidence": confidence_breakdown.get("overall_confidence"),
+        "confidence_label": confidence_breakdown.get("confidence_label"),
+        "ethical_caution": methodology_audit.get("ethical_caution"),
     }
 
 
@@ -2470,7 +2518,7 @@ def make_dashboard_png(
     gs = fig.add_gridspec(2, 2, width_ratios=[0.95, 1.45], height_ratios=[1, 1], wspace=0.28, hspace=0.34)
 
     fig.suptitle(
-        f"NELAYA-AI — Tuna Depth Current Layer v0.9.0-beta.1\nPerairan Aceh · Copernicus CMEMS · {date}",
+        f"NELAYA-AI — Tuna Depth Current Layer v1.0.0-stable\nPerairan Aceh · Copernicus CMEMS · {date}",
         fontsize=14,
         fontweight="bold",
         y=0.98,
@@ -2632,7 +2680,7 @@ def main():
     date = extract_date(f) or args.date or datetime.now(ZoneInfo("Asia/Jakarta")).strftime("%Y-%m-%d")
 
     print("=" * 78)
-    print("NELAYA-AI Tuna Depth Current Analysis v0.9.0")
+    print("NELAYA-AI Tuna Depth Current Analysis v1.0.0")
     print("=" * 78)
     print(f"Input : {f}")
     print(f"Date  : {date}")
@@ -2772,7 +2820,7 @@ def main():
 
     summary = {
         "module": "nelaya_ai_tuna_depth_current_analysis",
-        "version": "0.9.0-beta.1",
+        "version": "1.0.0-stable",
         "status": "ready",
         "created_at": datetime.now(ZoneInfo("Asia/Jakarta")).isoformat(),
         "snapshot_date": date,
@@ -2793,7 +2841,7 @@ def main():
         "ssh_front_diagnostics": ssh_front_diagnostics,
         "safety_gate_diagnostics": safety_gate_diagnostics,
         "operational_decision_summary": {
-            "version": "0.9.0-beta.1",
+            "version": "1.0.0-stable",
             "main_message": "Tuna Depth kini membaca peluang oseanografi bersama Safety Gate dan Explanation Layer. Label operasional adalah pembacaan kehati-hatian, bukan perintah melaut.",
             "top_cluster_decision": clustered_candidates[0].get("operational_decision_v084") if clustered_candidates else None,
             "top_cluster_explanation": clustered_candidates[0].get("explanation_v085") if clustered_candidates else None,
@@ -2810,7 +2858,7 @@ def main():
             date=date,
             confidence_breakdown=confidence_breakdown,
             operational_decision_summary={
-                "version": "0.9.0-beta.1",
+                "version": "1.0.0-stable",
                 "main_message": "Tuna Depth kini membaca peluang oseanografi bersama Safety Gate dan Explanation Layer. Label operasional adalah pembacaan kehati-hatian, bukan perintah melaut.",
                 "top_cluster_decision": clustered_candidates[0].get("operational_decision_v084") if clustered_candidates else None,
                 "top_cluster_explanation": clustered_candidates[0].get("explanation_v085") if clustered_candidates else None,
@@ -2829,7 +2877,7 @@ def main():
             date=date,
             confidence_breakdown=confidence_breakdown,
             operational_decision_summary={
-                "version": "0.9.0-beta.1",
+                "version": "1.0.0-stable",
                 "main_message": "Tuna Depth kini membaca peluang oseanografi bersama Safety Gate dan Explanation Layer. Label operasional adalah pembacaan kehati-hatian, bukan perintah melaut.",
                 "top_cluster_decision": clustered_candidates[0].get("operational_decision_v084") if clustered_candidates else None,
                 "top_cluster_explanation": clustered_candidates[0].get("explanation_v085") if clustered_candidates else None,
@@ -2843,6 +2891,56 @@ def main():
                 clustered_candidates=clustered_candidates,
             ),
             clustered_candidates=clustered_candidates,
+        ),
+        "release_status_v100": build_release_status_v100(
+            date=date,
+            public_summary=build_public_summary_v090(
+                date=date,
+                confidence_breakdown=confidence_breakdown,
+                operational_decision_summary={
+                    "version": "1.0.0-stable",
+                    "main_message": "Tuna Depth membaca peluang oseanografi bersama Safety Gate dan Explanation Layer. Label operasional adalah pembacaan kehati-hatian, bukan perintah melaut.",
+                    "top_cluster_decision": clustered_candidates[0].get("operational_decision_v084") if clustered_candidates else None,
+                    "top_cluster_explanation": clustered_candidates[0].get("explanation_v085") if clustered_candidates else None,
+                },
+                methodology_audit=build_methodology_audit_v086(
+                    date=date,
+                    thermal_diagnostics=thermal_diagnostics,
+                    ssh_front_diagnostics=ssh_front_diagnostics,
+                    safety_gate_diagnostics=safety_gate_diagnostics,
+                    confidence_breakdown=confidence_breakdown,
+                    clustered_candidates=clustered_candidates,
+                ),
+                clustered_candidates=clustered_candidates,
+            ),
+            api_contract=build_api_contract_v090(
+                date=date,
+                confidence_breakdown=confidence_breakdown,
+                operational_decision_summary={
+                    "version": "1.0.0-stable",
+                    "main_message": "Tuna Depth membaca peluang oseanografi bersama Safety Gate dan Explanation Layer. Label operasional adalah pembacaan kehati-hatian, bukan perintah melaut.",
+                    "top_cluster_decision": clustered_candidates[0].get("operational_decision_v084") if clustered_candidates else None,
+                    "top_cluster_explanation": clustered_candidates[0].get("explanation_v085") if clustered_candidates else None,
+                },
+                methodology_audit=build_methodology_audit_v086(
+                    date=date,
+                    thermal_diagnostics=thermal_diagnostics,
+                    ssh_front_diagnostics=ssh_front_diagnostics,
+                    safety_gate_diagnostics=safety_gate_diagnostics,
+                    confidence_breakdown=confidence_breakdown,
+                    clustered_candidates=clustered_candidates,
+                ),
+                clustered_candidates=clustered_candidates,
+            ),
+            methodology_audit=build_methodology_audit_v086(
+                date=date,
+                thermal_diagnostics=thermal_diagnostics,
+                ssh_front_diagnostics=ssh_front_diagnostics,
+                safety_gate_diagnostics=safety_gate_diagnostics,
+                confidence_breakdown=confidence_breakdown,
+                clustered_candidates=clustered_candidates,
+            ),
+            confidence_breakdown=confidence_breakdown,
         ),
         "confidence_breakdown": confidence_breakdown,
         "clustered_candidates": clustered_candidates,

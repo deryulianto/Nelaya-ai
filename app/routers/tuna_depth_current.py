@@ -74,6 +74,7 @@ def health():
         payload["methodology_audit_v086"] = data.get("methodology_audit_v086")
         payload["api_contract_v090"] = data.get("api_contract_v090")
         payload["public_summary_v090"] = data.get("public_summary_v090")
+        payload["release_status_v100"] = data.get("release_status_v100")
         payload["audit"] = data.get("audit")
 
     return payload
@@ -116,6 +117,7 @@ def summary():
             "methodology_audit_v086": data.get("methodology_audit_v086"),
             "api_contract_v090": data.get("api_contract_v090"),
             "public_summary_v090": data.get("public_summary_v090"),
+            "release_status_v100": data.get("release_status_v100"),
             "confidence_breakdown": data.get("confidence_breakdown"),
             "clustered_candidates": data.get("clustered_candidates"),
             "layers": data.get("layers"),
