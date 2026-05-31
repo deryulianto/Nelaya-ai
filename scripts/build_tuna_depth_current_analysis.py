@@ -782,6 +782,161 @@ def candidate_reason(score: float | None, speed_ms: float | None, coherence: flo
     return " ".join(parts)
 
 
+
+def habitat_score_v080(
+    rank_score: float | None,
+    thermal_score: float | None,
+    directional_coherence: float | None,
+) -> float | None:
+    """
+    v0.8.1 thermal-aware habitat score.
+
+    This is still a probabilistic corridor score, not a fish-location claim.
+    Weighted from current-depth ranking, thermal gate, and vertical coherence.
+    """
+    rs = safe_float(rank_score)
+    ts = safe_float(thermal_score)
+    coh = safe_float(directional_coherence)
+
+    if rs is None:
+        return None
+
+    # If thermal is missing, keep score current-aware but do not over-penalize.
+    if ts is None:
+        ts = 0.50
+
+    if coh is None:
+        coh = 0.50
+
+    return round(clip01(0.65 * rs + 0.25 * ts + 0.10 * coh), 6)
+
+
+def enrich_clustered_candidates_with_thermal(
+    lat: np.ndarray,
+    lon: np.ndarray,
+    score: np.ndarray,
+    vertical_maps: dict[str, np.ndarray] | None,
+    thermal_maps: dict[str, np.ndarray] | None,
+    clustered_candidates: list[dict[str, Any]],
+    threshold: float,
+    default_radius_km: float = 35.0,
+) -> list[dict[str, Any]]:
+    """
+    Add thermal-aware summaries to each candidate corridor cluster.
+    """
+    if not clustered_candidates:
+        return clustered_candidates
+
+    thermal_maps = thermal_maps or {}
+    vertical_maps = vertical_maps or {}
+
+    thermal_score_map = thermal_maps.get("thermal_score")
+    temp_map = thermal_maps.get("temperature_mean_30_100_c")
+    coh_map = vertical_maps.get("directional_coherence")
+
+    if thermal_score_map is None and temp_map is None:
+        for c in clustered_candidates:
+            c["thermal_status"] = "missing"
+            c["habitat_score_v080_mean"] = habitat_score_v080(
+                c.get("mean_score"),
+                None,
+                c.get("top_directional_coherence"),
+            )
+        return clustered_candidates
+
+    lon2d, lat2d = np.meshgrid(lon, lat)
+
+    enriched = []
+    for c in clustered_candidates:
+        clat = safe_float(c.get("centroid_lat"))
+        clon = safe_float(c.get("centroid_lon"))
+
+        if clat is None or clon is None:
+            enriched.append(c)
+            continue
+
+        radius = safe_float(c.get("radius_km_est"), default_radius_km) or default_radius_km
+        radius = max(default_radius_km, radius)
+
+        # Fast approximate distance is enough for cluster summary in small Aceh ROI.
+        km_y = (lat2d - clat) * 111.0
+        km_x = (lon2d - clon) * 111.0 * math.cos(math.radians(clat))
+        dist = np.sqrt(km_x ** 2 + km_y ** 2)
+
+        mask = (dist <= radius) & np.isfinite(score) & (score >= threshold)
+
+        if thermal_score_map is not None:
+            ts_vals = np.asarray(thermal_score_map, dtype=float)[mask]
+            ts_vals = ts_vals[np.isfinite(ts_vals)]
+            mean_thermal = safe_float(np.nanmean(ts_vals)) if ts_vals.size else None
+        else:
+            mean_thermal = None
+
+        if temp_map is not None:
+            temp_vals = np.asarray(temp_map, dtype=float)[mask]
+            temp_vals = temp_vals[np.isfinite(temp_vals)]
+            mean_temp = safe_float(np.nanmean(temp_vals)) if temp_vals.size else None
+        else:
+            mean_temp = None
+
+        if coh_map is not None:
+            coh_vals = np.asarray(coh_map, dtype=float)[mask]
+            coh_vals = coh_vals[np.isfinite(coh_vals)]
+            mean_coh = safe_float(np.nanmean(coh_vals)) if coh_vals.size else safe_float(c.get("top_directional_coherence"))
+        else:
+            mean_coh = safe_float(c.get("top_directional_coherence"))
+
+        habitat_vals = []
+        if np.any(mask):
+            rows, cols = np.where(mask)
+            for ii, jj in zip(rows, cols):
+                rs = safe_float(score[ii, jj])
+                ts = safe_float(thermal_score_map[ii, jj]) if thermal_score_map is not None else None
+                coh = safe_float(coh_map[ii, jj]) if coh_map is not None else mean_coh
+                hs = habitat_score_v080(rs, ts, coh)
+                if hs is not None:
+                    habitat_vals.append(hs)
+
+        mean_habitat = safe_float(np.nanmean(habitat_vals)) if habitat_vals else habitat_score_v080(
+            c.get("mean_score"),
+            mean_thermal,
+            mean_coh,
+        )
+
+        # top point thermal lookup
+        top_lat = safe_float(c.get("top_lat"))
+        top_lon = safe_float(c.get("top_lon"))
+        top_thermal = None
+        top_temp = None
+        top_habitat = None
+
+        if top_lat is not None and top_lon is not None:
+            ii = int(np.nanargmin(np.abs(lat - top_lat)))
+            jj = int(np.nanargmin(np.abs(lon - top_lon)))
+            top_thermal = safe_float(thermal_score_map[ii, jj]) if thermal_score_map is not None else None
+            top_temp = safe_float(temp_map[ii, jj]) if temp_map is not None else None
+            top_habitat = habitat_score_v080(c.get("max_score"), top_thermal, c.get("top_directional_coherence"))
+
+        c = dict(c)
+        c.update({
+            "thermal_status": "ready" if mean_thermal is not None or mean_temp is not None else "missing",
+            "mean_thermal_score": mean_thermal,
+            "mean_temperature_30_100_c": mean_temp,
+            "mean_directional_coherence": mean_coh,
+            "habitat_score_v080_mean": mean_habitat,
+            "top_thermal_score": top_thermal,
+            "top_temperature_30_100_c": top_temp,
+            "top_habitat_score_v080": top_habitat,
+            "interpretation": (
+                "Klaster kandidat koridor arus 30–100 m yang kini dibaca bersama thermal gate bawah permukaan. "
+                "Tetap gunakan bersama SST, CHL, SSH/front, bathymetry, cuaca, keselamatan, dan pengalaman nelayan."
+            ),
+        })
+        enriched.append(c)
+
+    return enriched
+
+
 def make_geojson(
     out_file: Path,
     lat: np.ndarray,
@@ -792,10 +947,17 @@ def make_geojson(
     max_points: int,
     vertical_maps: dict[str, np.ndarray] | None = None,
     clustered_candidates: list[dict[str, Any]] | None = None,
+    thermal_maps: dict[str, np.ndarray] | None = None,
 ):
     rows = []
-    coh_map = (vertical_maps or {}).get("directional_coherence")
-    shear_map = (vertical_maps or {}).get("vertical_shear_per_m")
+    vertical_maps = vertical_maps or {}
+    thermal_maps = thermal_maps or {}
+
+    coh_map = vertical_maps.get("directional_coherence")
+    shear_map = vertical_maps.get("vertical_shear_per_m")
+
+    thermal_score_map = thermal_maps.get("thermal_score")
+    temp_map = thermal_maps.get("temperature_mean_30_100_c")
 
     for i in range(score.shape[0]):
         for j in range(score.shape[1]):
@@ -807,6 +969,10 @@ def make_geojson(
             shear = safe_float(shear_map[i, j]) if shear_map is not None else None
             sp = safe_float(speed[i, j])
 
+            thermal_score = safe_float(thermal_score_map[i, j]) if thermal_score_map is not None else None
+            temp_mean = safe_float(temp_map[i, j]) if temp_map is not None else None
+            habitat_score = habitat_score_v080(sc, thermal_score, coherence)
+
             rows.append(
                 {
                     "lat": float(lat[i]),
@@ -815,10 +981,19 @@ def make_geojson(
                     "speed_ms": sp,
                     "directional_coherence": coherence,
                     "vertical_shear_per_m": shear,
+                    "thermal_score": thermal_score,
+                    "temperature_mean_30_100_c": temp_mean,
+                    "habitat_score_v080": habitat_score,
                 }
             )
 
-    rows = sorted(rows, key=lambda r: r["score"], reverse=True)[:max_points]
+    rows = sorted(
+        rows,
+        key=lambda r: (
+            r["habitat_score_v080"] if r["habitat_score_v080"] is not None else r["score"]
+        ),
+        reverse=True,
+    )[:max_points]
 
     features = []
     for r in rows:
@@ -831,21 +1006,30 @@ def make_geojson(
                 "properties": {
                     "score": r["score"],
                     "rank_score": r["score"],
+                    "habitat_score_v080": r["habitat_score_v080"],
                     "speed_ms": r["speed_ms"],
                     "directional_coherence": r["directional_coherence"],
                     "vertical_shear_per_m": r["vertical_shear_per_m"],
+                    "thermal_score": r["thermal_score"],
+                    "temperature_mean_30_100_c": r["temperature_mean_30_100_c"],
                     "cluster_id": cluster_id,
-                    "candidate_type": "current_depth_corridor",
+                    "candidate_type": "current_depth_thermal_corridor",
                     "depth_band": "30–100 m",
-                    "label": "Tuna depth current suitability candidate",
+                    "label": "Tuna depth current + thermal suitability candidate",
                     "physical_reason": candidate_reason(
                         r["score"],
                         r["speed_ms"],
                         r["directional_coherence"],
                         r["vertical_shear_per_m"],
                     ),
+                    "thermal_reason": (
+                        f"Thermal gate mendukung dengan suhu rata-rata 30–100 m sekitar "
+                        f"{r['temperature_mean_30_100_c']:.2f} °C dan thermal score {r['thermal_score']:.2f}."
+                        if r["temperature_mean_30_100_c"] is not None and r["thermal_score"] is not None
+                        else "Thermal gate belum tersedia untuk titik ini."
+                    ),
                     "scientific_caution": (
-                        "Probabilistic current-depth signal, not a fish-location guarantee. "
+                        "Probabilistic current-depth and thermal signal, not a fish-location guarantee. "
                         "Read together with SST, CHL, SSH/front, bathymetry, FGI, weather, safety, and fisher knowledge."
                     ),
                 },
@@ -855,7 +1039,7 @@ def make_geojson(
     geojson = {
         "type": "FeatureCollection",
         "name": "NELAYA-AI Tuna Depth Current Candidates",
-        "version": "0.8.0-alpha.1",
+        "version": "0.8.1-alpha.1",
         "features": features,
     }
 
@@ -868,6 +1052,7 @@ def make_geojson(
         "point_count": len(features),
         "max_points": max_points,
         "cluster_count": len(clustered_candidates or []),
+        "thermal_aware": thermal_score_map is not None or temp_map is not None,
     }
 
 
@@ -1009,8 +1194,7 @@ def read_thermal_h5(path: Path) -> dict[str, Any]:
     RuntimeError: H5DSget_num_scales.
     Direct h5py reading avoids dimension-scale parsing.
     """
-    import h5py
-
+    
     with h5py.File(path, "r") as f:
         required = ["thetao", "depth", "latitude", "longitude"]
         missing = [k for k in required if k not in f]
@@ -1102,47 +1286,55 @@ def build_thermal_diagnostics(
     current_lon: np.ndarray,
 ) -> tuple[dict[str, Any], dict[str, np.ndarray]]:
     """
-    Optional v0.8.0 thermal layer using direct h5py reading.
-    If thetao file is missing or incompatible, builder must still run.
+    Optional v0.8.1 thermal layer.
+
+    Reads prebuilt thermal diagnostics from:
+    - data/physics/thermal_depth_diagnostics_today.json
+    - data/physics/thermal_depth_maps_today.npz
+
+    This avoids mixing h5py/HDF5 with xarray/netCDF4/matplotlib in the main builder.
     """
-    path = thermal_file_for_date(date)
+    diag_path = OUT_DIR / "thermal_depth_diagnostics_today.json"
+    map_path = OUT_DIR / "thermal_depth_maps_today.npz"
 
     empty = {
         "thermal_score": np.full((len(current_lat), len(current_lon)), np.nan, dtype=float),
         "temperature_mean_30_100_c": np.full((len(current_lat), len(current_lon)), np.nan, dtype=float),
     }
 
-    if not path.exists():
+    if not diag_path.exists() or not map_path.exists():
         return {
             "status": "missing",
-            "source_file": str(path),
-            "message": "Thermal thetao file belum tersedia; v0.8.0 kembali memakai current-depth physics only.",
+            "version": "0.8.1-alpha.1",
+            "source_file": str(diag_path),
+            "map_file": str(map_path),
+            "message": "Thermal diagnostics/map belum dibangun; jalankan scripts/build_thermal_depth_diagnostics.py lebih dulu.",
         }, empty
 
     try:
-        raw = read_thermal_h5(path)
-        thetao = raw["thetao"]
-        depths = raw["depth"]
-        thermal_lat = raw["lat"]
-        thermal_lon = raw["lon"]
-        attrs = raw.get("attrs", {})
+        diag = json.loads(diag_path.read_text(encoding="utf-8"))
 
-        # Expected thetao shape: time, depth, latitude, longitude
-        if thetao.ndim == 4:
-            thetao_3d = thetao[0, :, :, :]
-        elif thetao.ndim == 3:
-            thetao_3d = thetao
-        else:
+        if diag.get("snapshot_date") != date:
             return {
-                "status": "invalid",
-                "source_file": str(path),
-                "message": f"Dimensi thetao tidak dikenali: shape={thetao.shape}",
+                "status": "stale",
+                "version": "0.8.1-alpha.1",
+                "snapshot_date": diag.get("snapshot_date"),
+                "expected_date": date,
+                "source_file": diag.get("source_file"),
+                "map_file": str(map_path),
+                "message": "Thermal diagnostics tersedia tetapi tanggalnya tidak sama dengan current-depth snapshot.",
             }, empty
 
+        maps_npz = np.load(map_path)
+        thermal_lat = np.asarray(maps_npz["lat"], dtype=float)
+        thermal_lon = np.asarray(maps_npz["lon"], dtype=float)
+        thermal_score = np.asarray(maps_npz["thermal_score"], dtype=float)
+        temp_mean = np.asarray(maps_npz["temperature_mean_30_100_c"], dtype=float)
+
         if len(thermal_lat) != len(current_lat) or len(thermal_lon) != len(current_lon):
-            return {
+            diag = dict(diag)
+            diag.update({
                 "status": "grid_mismatch",
-                "source_file": str(path),
                 "thermal_grid_shape": {
                     "lat": int(len(thermal_lat)),
                     "lon": int(len(thermal_lon)),
@@ -1151,64 +1343,25 @@ def build_thermal_diagnostics(
                     "lat": int(len(current_lat)),
                     "lon": int(len(current_lon)),
                 },
-                "message": "Grid thermal belum sama dengan grid current; interpolasi belum diaktifkan pada v0.8.0-alpha.1.",
-            }, empty
+                "message": "Grid thermal map tidak sama dengan current grid.",
+            })
+            return diag, empty
 
-        keys = ["shallow_30m", "mid_50m", "deep_75m", "tuna_100m"]
-        temp_layers = []
-        layer_summary = {}
+        diag = dict(diag)
+        diag["status"] = "ready"
 
-        for key in keys:
-            target_depth = TARGET_DEPTHS[key]
-            depth_idx, actual_depth = nearest_depth(depths, target_depth)
-
-            temp = clean_temperature_c(
-                np.asarray(thetao_3d[depth_idx, :, :], dtype=float),
-                attrs,
-            )
-            temp_layers.append(temp)
-
-            layer_summary[key] = {
-                "target_depth_m": target_depth,
-                "actual_depth_m": actual_depth,
-                "temperature_stats_c": stats(temp),
-            }
-
-        temp_stack = np.stack(temp_layers, axis=0)
-        temp_mean = np.nanmean(temp_stack, axis=0)
-
-        score_stack = np.stack([thermal_suitability_score(t) for t in temp_layers], axis=0)
-        thermal_score = np.nanmean(score_stack, axis=0)
-
-        maps = {
+        return diag, {
             "thermal_score": thermal_score,
             "temperature_mean_30_100_c": temp_mean,
         }
 
-        valid = np.isfinite(thermal_score)
-
-        return {
-            "status": "ready",
-            "version": "0.8.0-alpha.1",
-            "source_file": str(path),
-            "variable": "thetao",
-            "units": attrs.get("units") or attrs.get("unit_long") or "degrees_C",
-            "target_depth_layers": layer_summary,
-            "temperature_mean_30_100_stats_c": stats(temp_mean),
-            "thermal_score_stats": stats(thermal_score),
-            "valid_grid_count": int(np.sum(valid)),
-            "valid_fraction": safe_float(np.sum(valid) / max(1, thermal_score.size)),
-            "interpretation": (
-                "Thermal diagnostics membaca suhu bawah permukaan 30–100 m sebagai gate ekologis awal. "
-                "Ini belum memasukkan dissolved oxygen, CHL/BGC, SSH/front, atau validasi tangkapan."
-            ),
-        }, maps
-
     except Exception as exc:
         return {
             "status": "error",
-            "source_file": str(path),
-            "message": f"Gagal membaca thermal thetao via h5py: {type(exc).__name__}: {exc}",
+            "version": "0.8.1-alpha.1",
+            "source_file": str(diag_path),
+            "map_file": str(map_path),
+            "message": f"Gagal membaca thermal diagnostics/map: {type(exc).__name__}: {exc}",
         }, empty
 
 
@@ -1239,7 +1392,7 @@ def make_dashboard_png(
     gs = fig.add_gridspec(2, 2, width_ratios=[0.95, 1.45], height_ratios=[1, 1], wspace=0.28, hspace=0.34)
 
     fig.suptitle(
-        f"NELAYA-AI — Tuna Depth Current Layer v0.8.0-alpha.1\nPerairan Aceh · Copernicus CMEMS · {date}",
+        f"NELAYA-AI — Tuna Depth Current Layer v0.8.1-alpha.1\nPerairan Aceh · Copernicus CMEMS · {date}",
         fontsize=14,
         fontweight="bold",
         y=0.98,
@@ -1401,7 +1554,7 @@ def main():
     date = extract_date(f) or args.date or datetime.now(ZoneInfo("Asia/Jakarta")).strftime("%Y-%m-%d")
 
     print("=" * 78)
-    print("NELAYA-AI Tuna Depth Current Analysis v0.8.0")
+    print("NELAYA-AI Tuna Depth Current Analysis v0.8.1")
     print("=" * 78)
     print(f"Input : {f}")
     print(f"Date  : {date}")
@@ -1454,6 +1607,16 @@ def main():
         max_points_scan=args.max_points,
         vertical_maps=vertical_maps,
     )
+    clustered_candidates = enrich_clustered_candidates_with_thermal(
+        lat=lat,
+        lon=lon,
+        score=candidate_rank_score,
+        vertical_maps=vertical_maps,
+        thermal_maps=thermal_maps,
+        clustered_candidates=clustered_candidates,
+        threshold=args.geojson_threshold,
+        default_radius_km=35.0,
+    )
 
     layer_summary = {}
     for k, item in layers.items():
@@ -1489,11 +1652,12 @@ def main():
                    max_points=args.max_points,
                    vertical_maps=vertical_maps,
                    clustered_candidates=clustered_candidates,
+                   thermal_maps=thermal_maps,
           )
 
     summary = {
         "module": "nelaya_ai_tuna_depth_current_analysis",
-        "version": "0.8.0-alpha.1",
+        "version": "0.8.1-alpha.1",
         "status": "ready",
         "created_at": datetime.now(ZoneInfo("Asia/Jakarta")).isoformat(),
         "snapshot_date": date,

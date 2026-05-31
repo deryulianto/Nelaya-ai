@@ -31,13 +31,21 @@ mkdir -p "$LOG_DIR"
   "$PY" scripts/download_thermal_depth_nrt_copernicus.py --days-back 7 || true
 
   echo ""
-  echo "=== 3. Build Tuna Depth Current + Thermal Gate ==="
+  echo "=== 3. Build thermal-depth diagnostics/map ==="
+  SNAP_DATE="$(jq -r '.date // empty' data/physics/thermal_depth_download_report.json 2>/dev/null || true)"
+  if [ -z "$SNAP_DATE" ]; then
+    SNAP_DATE="$(date +%F)"
+  fi
+  "$PY" scripts/build_thermal_depth_diagnostics.py --date "$SNAP_DATE" || true
+
+  echo ""
+  echo "=== 4. Build Tuna Depth Current + Thermal Gate ==="
   "$PY" scripts/build_tuna_depth_current_analysis.py \
     --geojson-threshold 0.72 \
     --max-points 500
 
   echo ""
-  echo "=== 4. Summary check ==="
+  echo "=== 5. Summary check ==="
   jq '{
     version,
     snapshot_date,
