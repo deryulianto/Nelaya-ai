@@ -70,6 +70,10 @@ def health():
         payload["thermal_diagnostics"] = data.get("thermal_diagnostics")
         payload["ssh_front_diagnostics"] = data.get("ssh_front_diagnostics")
         payload["safety_gate_diagnostics"] = data.get("safety_gate_diagnostics")
+        payload["operational_decision_summary"] = data.get("operational_decision_summary")
+        payload["methodology_audit_v086"] = data.get("methodology_audit_v086")
+        payload["api_contract_v090"] = data.get("api_contract_v090")
+        payload["public_summary_v090"] = data.get("public_summary_v090")
         payload["audit"] = data.get("audit")
 
     return payload
@@ -108,6 +112,10 @@ def summary():
             "thermal_diagnostics": data.get("thermal_diagnostics"),
             "ssh_front_diagnostics": data.get("ssh_front_diagnostics"),
             "safety_gate_diagnostics": data.get("safety_gate_diagnostics"),
+            "operational_decision_summary": data.get("operational_decision_summary"),
+            "methodology_audit_v086": data.get("methodology_audit_v086"),
+            "api_contract_v090": data.get("api_contract_v090"),
+            "public_summary_v090": data.get("public_summary_v090"),
             "confidence_breakdown": data.get("confidence_breakdown"),
             "clustered_candidates": data.get("clustered_candidates"),
             "layers": data.get("layers"),
