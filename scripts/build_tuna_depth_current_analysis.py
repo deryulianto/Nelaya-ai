@@ -990,6 +990,13 @@ def make_geojson(
             wave_val = safe_float(wave_map[i, j]) if wave_map is not None else None
             wind_val = safe_float(wind_map[i, j]) if wind_map is not None else None
             operational_score = operational_habitat_score_v083(habitat_score_082, safety_score)
+            operational_decision = operational_decision_v084(
+                operational_score,
+                habitat_score_082,
+                safety_score,
+                wave_val,
+                wind_val,
+            )
 
             rows.append(
                 {
@@ -1010,6 +1017,7 @@ def make_geojson(
                     "wave_m": wave_val,
                     "wind_speed_ms": wind_val,
                     "operational_habitat_score_v083": operational_score,
+                    "operational_decision_v084": operational_decision,
                 }
             )
 
@@ -1041,6 +1049,7 @@ def make_geojson(
                     "wave_m": r.get("wave_m"),
                     "wind_speed_ms": r.get("wind_speed_ms"),
                     "operational_habitat_score_v083": r.get("operational_habitat_score_v083"),
+                    "operational_decision_v084": r.get("operational_decision_v084"),
                     "speed_ms": r["speed_ms"],
                     "directional_coherence": r["directional_coherence"],
                     "vertical_shear_per_m": r["vertical_shear_per_m"],
@@ -1087,7 +1096,7 @@ def make_geojson(
     geojson = {
         "type": "FeatureCollection",
         "name": "NELAYA-AI Tuna Depth Current Candidates",
-        "version": "0.8.3-alpha.1",
+        "version": "0.8.4-alpha.1",
         "features": features,
     }
 
@@ -1355,7 +1364,7 @@ def build_thermal_diagnostics(
     if not diag_path.exists() or not map_path.exists():
         return {
             "status": "missing",
-            "version": "0.8.3-alpha.1",
+            "version": "0.8.4-alpha.1",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": "Thermal diagnostics/map belum dibangun; jalankan scripts/build_thermal_depth_diagnostics.py lebih dulu.",
@@ -1367,7 +1376,7 @@ def build_thermal_diagnostics(
         if diag.get("snapshot_date") != date:
             return {
                 "status": "stale",
-                "version": "0.8.3-alpha.1",
+                "version": "0.8.4-alpha.1",
                 "snapshot_date": diag.get("snapshot_date"),
                 "expected_date": date,
                 "source_file": diag.get("source_file"),
@@ -1408,7 +1417,7 @@ def build_thermal_diagnostics(
     except Exception as exc:
         return {
             "status": "error",
-            "version": "0.8.3-alpha.1",
+            "version": "0.8.4-alpha.1",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": f"Gagal membaca thermal diagnostics/map: {type(exc).__name__}: {exc}",
@@ -1440,7 +1449,7 @@ def build_ssh_front_diagnostics(
     if not diag_path.exists() or not map_path.exists():
         return {
             "status": "missing",
-            "version": "0.8.3-alpha.1",
+            "version": "0.8.4-alpha.1",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": "SSH/front diagnostics/map belum dibangun.",
@@ -1452,7 +1461,7 @@ def build_ssh_front_diagnostics(
         if diag.get("snapshot_date") != date:
             return {
                 "status": "stale",
-                "version": "0.8.3-alpha.1",
+                "version": "0.8.4-alpha.1",
                 "snapshot_date": diag.get("snapshot_date"),
                 "expected_date": date,
                 "source_file": diag.get("source_file"),
@@ -1495,7 +1504,7 @@ def build_ssh_front_diagnostics(
     except Exception as exc:
         return {
             "status": "error",
-            "version": "0.8.3-alpha.1",
+            "version": "0.8.4-alpha.1",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": f"Gagal membaca SSH/front diagnostics/map: {type(exc).__name__}: {exc}",
@@ -1680,7 +1689,7 @@ def build_safety_gate_diagnostics(
     if not diag_path.exists() or not map_path.exists():
         return {
             "status": "missing",
-            "version": "0.8.3-alpha.1",
+            "version": "0.8.4-alpha.1",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": "Safety Gate diagnostics/map belum dibangun.",
@@ -1692,7 +1701,7 @@ def build_safety_gate_diagnostics(
         if diag.get("snapshot_date") != date:
             return {
                 "status": "stale",
-                "version": "0.8.3-alpha.1",
+                "version": "0.8.4-alpha.1",
                 "snapshot_date": diag.get("snapshot_date"),
                 "expected_date": date,
                 "source_file": str(diag_path),
@@ -1738,7 +1747,7 @@ def build_safety_gate_diagnostics(
     except Exception as exc:
         return {
             "status": "error",
-            "version": "0.8.3-alpha.1",
+            "version": "0.8.4-alpha.1",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": f"Gagal membaca Safety Gate diagnostics/map: {type(exc).__name__}: {exc}",
@@ -1905,6 +1914,99 @@ def enrich_clustered_candidates_with_safety_gate(
     return enriched
 
 
+
+def operational_decision_v084(
+    operational_score: float | None,
+    habitat_score_v082_value: float | None,
+    safety_score_value: float | None,
+    wave_m: float | None,
+    wind_ms: float | None,
+) -> dict[str, Any]:
+    """
+    v0.8.4 operational decision label.
+
+    This is not a command to sail and not a fish-location guarantee.
+    It translates probabilistic habitat + safety into a cautious reading label.
+    """
+    op = safe_float(operational_score)
+    hab = safe_float(habitat_score_v082_value)
+    saf = safe_float(safety_score_value)
+    wave = safe_float(wave_m)
+    wind = safe_float(wind_ms)
+
+    # Hard caution gates for small-fisher context.
+    if (wave is not None and wave >= 2.5) or (wind is not None and wind >= 12.0) or (saf is not None and saf < 0.35):
+        return {
+            "label": "Tunda / risiko tinggi",
+            "level": "high_risk",
+            "color": "red",
+            "note": "Sinyal oseanografi tidak boleh mengalahkan keselamatan. Gelombang/angin atau safety score menunjukkan risiko tinggi.",
+        }
+
+    if op is None:
+        return {
+            "label": "Belum cukup data",
+            "level": "unknown",
+            "color": "slate",
+            "note": "Data operasional belum cukup untuk membuat label kehati-hatian.",
+        }
+
+    if op >= 0.60 and (saf is None or saf >= 0.65):
+        return {
+            "label": "Prioritas observasi hati-hati",
+            "level": "priority_observation",
+            "color": "emerald",
+            "note": "Sinyal habitat dan safety relatif mendukung, tetapi tetap perlu validasi lapangan, cuaca terkini, dan keputusan nelayan.",
+        }
+
+    if hab is not None and hab >= 0.70 and saf is not None and saf < 0.55:
+        return {
+            "label": "Oseanografi menarik, safety perlu waspada",
+            "level": "habitat_good_safety_watch",
+            "color": "amber",
+            "note": "Sinyal habitat cukup menarik, tetapi Safety Gate menahan interpretasi karena risiko operasional meningkat.",
+        }
+
+    if op >= 0.40:
+        return {
+            "label": "Observasi selektif",
+            "level": "selective_observation",
+            "color": "yellow",
+            "note": "Koridor masih layak diamati secara selektif, bukan dibaca sebagai tujuan melaut langsung.",
+        }
+
+    return {
+        "label": "Prioritas rendah / tunggu sinyal membaik",
+        "level": "low_priority",
+        "color": "slate",
+        "note": "Gabungan habitat dan safety belum cukup kuat untuk menjadi prioritas observasi.",
+    }
+
+
+def add_operational_decision_to_clusters(clustered_candidates: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out = []
+    for c in clustered_candidates or []:
+        c = dict(c)
+        decision = operational_decision_v084(
+            c.get("operational_habitat_score_v083_mean"),
+            c.get("habitat_score_v082_mean"),
+            c.get("mean_safety_score"),
+            c.get("mean_wave_m"),
+            c.get("mean_wind_speed_ms"),
+        )
+        top_decision = operational_decision_v084(
+            c.get("top_operational_habitat_score_v083"),
+            c.get("top_habitat_score_v082"),
+            c.get("top_safety_score"),
+            c.get("top_wave_m"),
+            c.get("top_wind_speed_ms"),
+        )
+        c["operational_decision_v084"] = decision
+        c["top_operational_decision_v084"] = top_decision
+        out.append(c)
+    return out
+
+
 def make_dashboard_png(
     out_png: Path,
     date: str,
@@ -1932,7 +2034,7 @@ def make_dashboard_png(
     gs = fig.add_gridspec(2, 2, width_ratios=[0.95, 1.45], height_ratios=[1, 1], wspace=0.28, hspace=0.34)
 
     fig.suptitle(
-        f"NELAYA-AI — Tuna Depth Current Layer v0.8.3-alpha.1\nPerairan Aceh · Copernicus CMEMS · {date}",
+        f"NELAYA-AI — Tuna Depth Current Layer v0.8.4-alpha.1\nPerairan Aceh · Copernicus CMEMS · {date}",
         fontsize=14,
         fontweight="bold",
         y=0.98,
@@ -2094,7 +2196,7 @@ def main():
     date = extract_date(f) or args.date or datetime.now(ZoneInfo("Asia/Jakarta")).strftime("%Y-%m-%d")
 
     print("=" * 78)
-    print("NELAYA-AI Tuna Depth Current Analysis v0.8.3")
+    print("NELAYA-AI Tuna Depth Current Analysis v0.8.4")
     print("=" * 78)
     print(f"Input : {f}")
     print(f"Date  : {date}")
@@ -2190,6 +2292,7 @@ def main():
         threshold=args.geojson_threshold,
         default_radius_km=35.0,
     )
+    clustered_candidates = add_operational_decision_to_clusters(clustered_candidates)
 
     layer_summary = {}
     for k, item in layers.items():
@@ -2232,7 +2335,7 @@ def main():
 
     summary = {
         "module": "nelaya_ai_tuna_depth_current_analysis",
-        "version": "0.8.3-alpha.1",
+        "version": "0.8.4-alpha.1",
         "status": "ready",
         "created_at": datetime.now(ZoneInfo("Asia/Jakarta")).isoformat(),
         "snapshot_date": date,
@@ -2252,6 +2355,11 @@ def main():
         "thermal_diagnostics": thermal_diagnostics,
         "ssh_front_diagnostics": ssh_front_diagnostics,
         "safety_gate_diagnostics": safety_gate_diagnostics,
+        "operational_decision_summary": {
+            "version": "0.8.4-alpha.1",
+            "main_message": "Tuna Depth kini membaca peluang oseanografi bersama Safety Gate. Label operasional adalah pembacaan kehati-hatian, bukan perintah melaut.",
+            "top_cluster_decision": clustered_candidates[0].get("operational_decision_v084") if clustered_candidates else None,
+        },
         "confidence_breakdown": confidence_breakdown,
         "clustered_candidates": clustered_candidates,
         "layers": layer_summary,
