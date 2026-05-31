@@ -948,16 +948,20 @@ def make_geojson(
     vertical_maps: dict[str, np.ndarray] | None = None,
     clustered_candidates: list[dict[str, Any]] | None = None,
     thermal_maps: dict[str, np.ndarray] | None = None,
+    ssh_maps: dict[str, np.ndarray] | None = None,
 ):
     rows = []
     vertical_maps = vertical_maps or {}
     thermal_maps = thermal_maps or {}
+    ssh_maps = ssh_maps or {}
 
     coh_map = vertical_maps.get("directional_coherence")
     shear_map = vertical_maps.get("vertical_shear_per_m")
 
     thermal_score_map = thermal_maps.get("thermal_score")
     temp_map = thermal_maps.get("temperature_mean_30_100_c")
+    ssh_front_map = ssh_maps.get("ssh_front_score")
+    ssh_grad_map = ssh_maps.get("ssh_gradient_m_per_m")
 
     for i in range(score.shape[0]):
         for j in range(score.shape[1]):
@@ -971,7 +975,10 @@ def make_geojson(
 
             thermal_score = safe_float(thermal_score_map[i, j]) if thermal_score_map is not None else None
             temp_mean = safe_float(temp_map[i, j]) if temp_map is not None else None
+            ssh_front = safe_float(ssh_front_map[i, j]) if ssh_front_map is not None else None
+            ssh_grad = safe_float(ssh_grad_map[i, j]) if ssh_grad_map is not None else None
             habitat_score = habitat_score_v080(sc, thermal_score, coherence)
+            habitat_score_082 = habitat_score_v082(sc, thermal_score, coherence, ssh_front)
 
             rows.append(
                 {
@@ -984,13 +991,16 @@ def make_geojson(
                     "thermal_score": thermal_score,
                     "temperature_mean_30_100_c": temp_mean,
                     "habitat_score_v080": habitat_score,
+                    "habitat_score_v082": habitat_score_082,
+                    "ssh_front_score": ssh_front,
+                    "ssh_gradient_m_per_m": ssh_grad,
                 }
             )
 
     rows = sorted(
         rows,
         key=lambda r: (
-            r["habitat_score_v080"] if r["habitat_score_v080"] is not None else r["score"]
+            r["habitat_score_v082"] if r.get("habitat_score_v082") is not None else (r["habitat_score_v080"] if r["habitat_score_v080"] is not None else r["score"])
         ),
         reverse=True,
     )[:max_points]
@@ -1007,6 +1017,9 @@ def make_geojson(
                     "score": r["score"],
                     "rank_score": r["score"],
                     "habitat_score_v080": r["habitat_score_v080"],
+                    "habitat_score_v082": r.get("habitat_score_v082"),
+                    "ssh_front_score": r.get("ssh_front_score"),
+                    "ssh_gradient_m_per_m": r.get("ssh_gradient_m_per_m"),
                     "speed_ms": r["speed_ms"],
                     "directional_coherence": r["directional_coherence"],
                     "vertical_shear_per_m": r["vertical_shear_per_m"],
@@ -1028,6 +1041,11 @@ def make_geojson(
                         if r["temperature_mean_30_100_c"] is not None and r["thermal_score"] is not None
                         else "Thermal gate belum tersedia untuk titik ini."
                     ),
+                    "ssh_front_reason": (
+                        f"SSH/front support terbaca {r.get('ssh_front_score'):.2f} dari gradien muka laut."
+                        if r.get("ssh_front_score") is not None
+                        else "SSH/front support belum tersedia untuk titik ini."
+                    ),
                     "scientific_caution": (
                         "Probabilistic current-depth and thermal signal, not a fish-location guarantee. "
                         "Read together with SST, CHL, SSH/front, bathymetry, FGI, weather, safety, and fisher knowledge."
@@ -1039,7 +1057,7 @@ def make_geojson(
     geojson = {
         "type": "FeatureCollection",
         "name": "NELAYA-AI Tuna Depth Current Candidates",
-        "version": "0.8.1-alpha.1",
+        "version": "0.8.2-alpha.1",
         "features": features,
     }
 
@@ -1053,6 +1071,7 @@ def make_geojson(
         "max_points": max_points,
         "cluster_count": len(clustered_candidates or []),
         "thermal_aware": thermal_score_map is not None or temp_map is not None,
+        "ssh_front_aware": ssh_front_map is not None,
     }
 
 
@@ -1305,7 +1324,7 @@ def build_thermal_diagnostics(
     if not diag_path.exists() or not map_path.exists():
         return {
             "status": "missing",
-            "version": "0.8.1-alpha.1",
+            "version": "0.8.2-alpha.1",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": "Thermal diagnostics/map belum dibangun; jalankan scripts/build_thermal_depth_diagnostics.py lebih dulu.",
@@ -1317,7 +1336,7 @@ def build_thermal_diagnostics(
         if diag.get("snapshot_date") != date:
             return {
                 "status": "stale",
-                "version": "0.8.1-alpha.1",
+                "version": "0.8.2-alpha.1",
                 "snapshot_date": diag.get("snapshot_date"),
                 "expected_date": date,
                 "source_file": diag.get("source_file"),
@@ -1358,11 +1377,250 @@ def build_thermal_diagnostics(
     except Exception as exc:
         return {
             "status": "error",
-            "version": "0.8.1-alpha.1",
+            "version": "0.8.2-alpha.1",
             "source_file": str(diag_path),
             "map_file": str(map_path),
             "message": f"Gagal membaca thermal diagnostics/map: {type(exc).__name__}: {exc}",
         }, empty
+
+
+
+def build_ssh_front_diagnostics(
+    date: str,
+    current_lat: np.ndarray,
+    current_lon: np.ndarray,
+) -> tuple[dict[str, Any], dict[str, np.ndarray]]:
+    """
+    Optional v0.8.2 SSH/front layer.
+
+    Reads prebuilt SSH/front diagnostics from:
+    - data/physics/ssh_front_diagnostics_today.json
+    - data/physics/ssh_front_maps_today.npz
+    """
+    diag_path = OUT_DIR / "ssh_front_diagnostics_today.json"
+    map_path = OUT_DIR / "ssh_front_maps_today.npz"
+
+    empty = {
+        "ssh_front_score": np.full((len(current_lat), len(current_lon)), np.nan, dtype=float),
+        "ssh_gradient_m_per_m": np.full((len(current_lat), len(current_lon)), np.nan, dtype=float),
+        "ssh_m": np.full((len(current_lat), len(current_lon)), np.nan, dtype=float),
+    }
+
+    if not diag_path.exists() or not map_path.exists():
+        return {
+            "status": "missing",
+            "version": "0.8.2-alpha.1",
+            "source_file": str(diag_path),
+            "map_file": str(map_path),
+            "message": "SSH/front diagnostics/map belum dibangun.",
+        }, empty
+
+    try:
+        diag = json.loads(diag_path.read_text(encoding="utf-8"))
+
+        if diag.get("snapshot_date") != date:
+            return {
+                "status": "stale",
+                "version": "0.8.2-alpha.1",
+                "snapshot_date": diag.get("snapshot_date"),
+                "expected_date": date,
+                "source_file": diag.get("source_file"),
+                "map_file": str(map_path),
+                "message": "SSH/front diagnostics tersedia tetapi tanggalnya tidak sama dengan current-depth snapshot.",
+            }, empty
+
+        maps_npz = np.load(map_path)
+        ssh_lat = np.asarray(maps_npz["lat"], dtype=float)
+        ssh_lon = np.asarray(maps_npz["lon"], dtype=float)
+        ssh_front_score = np.asarray(maps_npz["ssh_front_score"], dtype=float)
+        ssh_gradient = np.asarray(maps_npz["ssh_gradient_m_per_m"], dtype=float)
+        ssh_m = np.asarray(maps_npz["ssh_m"], dtype=float)
+
+        if len(ssh_lat) != len(current_lat) or len(ssh_lon) != len(current_lon):
+            diag = dict(diag)
+            diag.update({
+                "status": "grid_mismatch",
+                "ssh_grid_shape": {
+                    "lat": int(len(ssh_lat)),
+                    "lon": int(len(ssh_lon)),
+                },
+                "current_grid_shape": {
+                    "lat": int(len(current_lat)),
+                    "lon": int(len(current_lon)),
+                },
+                "message": "Grid SSH/front tidak sama dengan current grid.",
+            })
+            return diag, empty
+
+        diag = dict(diag)
+        diag["status"] = "ready"
+
+        return diag, {
+            "ssh_front_score": ssh_front_score,
+            "ssh_gradient_m_per_m": ssh_gradient,
+            "ssh_m": ssh_m,
+        }
+
+    except Exception as exc:
+        return {
+            "status": "error",
+            "version": "0.8.2-alpha.1",
+            "source_file": str(diag_path),
+            "map_file": str(map_path),
+            "message": f"Gagal membaca SSH/front diagnostics/map: {type(exc).__name__}: {exc}",
+        }, empty
+
+
+def habitat_score_v082(
+    rank_score: float | None,
+    thermal_score: float | None,
+    directional_coherence: float | None,
+    ssh_front_score: float | None,
+) -> float | None:
+    """
+    v0.8.2 habitat score:
+    current-depth + thermal gate + vertical coherence + SSH/front support.
+    """
+    rs = safe_float(rank_score)
+    ts = safe_float(thermal_score)
+    coh = safe_float(directional_coherence)
+    fs = safe_float(ssh_front_score)
+
+    if rs is None:
+        return None
+
+    if ts is None:
+        ts = 0.50
+    if coh is None:
+        coh = 0.50
+    if fs is None:
+        fs = 0.50
+
+    return round(clip01(0.55 * rs + 0.25 * ts + 0.10 * coh + 0.10 * fs), 6)
+
+
+def enrich_clustered_candidates_with_ssh_front(
+    lat: np.ndarray,
+    lon: np.ndarray,
+    score: np.ndarray,
+    vertical_maps: dict[str, np.ndarray] | None,
+    thermal_maps: dict[str, np.ndarray] | None,
+    ssh_maps: dict[str, np.ndarray] | None,
+    clustered_candidates: list[dict[str, Any]],
+    threshold: float,
+    default_radius_km: float = 35.0,
+) -> list[dict[str, Any]]:
+    """
+    Add SSH/front summaries and v0.8.2 habitat score to each cluster.
+    """
+    if not clustered_candidates:
+        return clustered_candidates
+
+    vertical_maps = vertical_maps or {}
+    thermal_maps = thermal_maps or {}
+    ssh_maps = ssh_maps or {}
+
+    coh_map = vertical_maps.get("directional_coherence")
+    thermal_score_map = thermal_maps.get("thermal_score")
+    ssh_front_map = ssh_maps.get("ssh_front_score")
+    ssh_grad_map = ssh_maps.get("ssh_gradient_m_per_m")
+
+    if ssh_front_map is None:
+        for c in clustered_candidates:
+            c["ssh_front_status"] = "missing"
+            c["habitat_score_v082_mean"] = habitat_score_v082(
+                c.get("mean_score"),
+                c.get("mean_thermal_score"),
+                c.get("mean_directional_coherence") or c.get("top_directional_coherence"),
+                None,
+            )
+        return clustered_candidates
+
+    lon2d, lat2d = np.meshgrid(lon, lat)
+    enriched = []
+
+    for c in clustered_candidates:
+        clat = safe_float(c.get("centroid_lat"))
+        clon = safe_float(c.get("centroid_lon"))
+
+        if clat is None or clon is None:
+            enriched.append(c)
+            continue
+
+        radius = safe_float(c.get("radius_km_est"), default_radius_km) or default_radius_km
+        radius = max(default_radius_km, radius)
+
+        km_y = (lat2d - clat) * 111.0
+        km_x = (lon2d - clon) * 111.0 * math.cos(math.radians(clat))
+        dist = np.sqrt(km_x ** 2 + km_y ** 2)
+        mask = (dist <= radius) & np.isfinite(score) & (score >= threshold)
+
+        front_vals = np.asarray(ssh_front_map, dtype=float)[mask]
+        front_vals = front_vals[np.isfinite(front_vals)]
+        mean_front = safe_float(np.nanmean(front_vals)) if front_vals.size else None
+
+        if ssh_grad_map is not None:
+            grad_vals = np.asarray(ssh_grad_map, dtype=float)[mask]
+            grad_vals = grad_vals[np.isfinite(grad_vals)]
+            mean_grad = safe_float(np.nanmean(grad_vals)) if grad_vals.size else None
+        else:
+            mean_grad = None
+
+        habitat_vals = []
+        if np.any(mask):
+            rows, cols = np.where(mask)
+            for ii, jj in zip(rows, cols):
+                rs = safe_float(score[ii, jj])
+                ts = safe_float(thermal_score_map[ii, jj]) if thermal_score_map is not None else None
+                coh = safe_float(coh_map[ii, jj]) if coh_map is not None else None
+                fs = safe_float(ssh_front_map[ii, jj])
+                hs = habitat_score_v082(rs, ts, coh, fs)
+                if hs is not None:
+                    habitat_vals.append(hs)
+
+        mean_habitat_v082 = safe_float(np.nanmean(habitat_vals)) if habitat_vals else habitat_score_v082(
+            c.get("mean_score"),
+            c.get("mean_thermal_score"),
+            c.get("mean_directional_coherence") or c.get("top_directional_coherence"),
+            mean_front,
+        )
+
+        top_lat = safe_float(c.get("top_lat"))
+        top_lon = safe_float(c.get("top_lon"))
+        top_front = None
+        top_grad = None
+        top_habitat_v082 = None
+
+        if top_lat is not None and top_lon is not None:
+            ii = int(np.nanargmin(np.abs(lat - top_lat)))
+            jj = int(np.nanargmin(np.abs(lon - top_lon)))
+            top_front = safe_float(ssh_front_map[ii, jj])
+            top_grad = safe_float(ssh_grad_map[ii, jj]) if ssh_grad_map is not None else None
+            top_habitat_v082 = habitat_score_v082(
+                c.get("max_score"),
+                c.get("top_thermal_score"),
+                c.get("top_directional_coherence"),
+                top_front,
+            )
+
+        c = dict(c)
+        c.update({
+            "ssh_front_status": "ready" if mean_front is not None else "missing",
+            "mean_ssh_front_score": mean_front,
+            "mean_ssh_gradient_m_per_m": mean_grad,
+            "habitat_score_v082_mean": mean_habitat_v082,
+            "top_ssh_front_score": top_front,
+            "top_ssh_gradient_m_per_m": top_grad,
+            "top_habitat_score_v082": top_habitat_v082,
+            "interpretation": (
+                "Klaster kandidat koridor 30–100 m yang dibaca bersama arus, thermal gate, "
+                "dan SSH/front support. Tetap gunakan bersama SST, CHL, bathymetry, cuaca, "
+                "keselamatan, regulasi, dan pengalaman nelayan."
+            ),
+        })
+        enriched.append(c)
+
+    return enriched
 
 
 def make_dashboard_png(
@@ -1392,7 +1650,7 @@ def make_dashboard_png(
     gs = fig.add_gridspec(2, 2, width_ratios=[0.95, 1.45], height_ratios=[1, 1], wspace=0.28, hspace=0.34)
 
     fig.suptitle(
-        f"NELAYA-AI — Tuna Depth Current Layer v0.8.1-alpha.1\nPerairan Aceh · Copernicus CMEMS · {date}",
+        f"NELAYA-AI — Tuna Depth Current Layer v0.8.2-alpha.1\nPerairan Aceh · Copernicus CMEMS · {date}",
         fontsize=14,
         fontweight="bold",
         y=0.98,
@@ -1554,7 +1812,7 @@ def main():
     date = extract_date(f) or args.date or datetime.now(ZoneInfo("Asia/Jakarta")).strftime("%Y-%m-%d")
 
     print("=" * 78)
-    print("NELAYA-AI Tuna Depth Current Analysis v0.8.1")
+    print("NELAYA-AI Tuna Depth Current Analysis v0.8.2")
     print("=" * 78)
     print(f"Input : {f}")
     print(f"Date  : {date}")
@@ -1574,6 +1832,11 @@ def main():
 
     vertical_diagnostics, vertical_maps = build_vertical_diagnostics(layers)
     thermal_diagnostics, thermal_maps = build_thermal_diagnostics(
+        date=date,
+        current_lat=lat,
+        current_lon=lon,
+    )
+    ssh_front_diagnostics, ssh_maps = build_ssh_front_diagnostics(
         date=date,
         current_lat=lat,
         current_lon=lon,
@@ -1617,6 +1880,17 @@ def main():
         threshold=args.geojson_threshold,
         default_radius_km=35.0,
     )
+    clustered_candidates = enrich_clustered_candidates_with_ssh_front(
+        lat=lat,
+        lon=lon,
+        score=candidate_rank_score,
+        vertical_maps=vertical_maps,
+        thermal_maps=thermal_maps,
+        ssh_maps=ssh_maps,
+        clustered_candidates=clustered_candidates,
+        threshold=args.geojson_threshold,
+        default_radius_km=35.0,
+    )
 
     layer_summary = {}
     for k, item in layers.items():
@@ -1653,11 +1927,12 @@ def main():
                    vertical_maps=vertical_maps,
                    clustered_candidates=clustered_candidates,
                    thermal_maps=thermal_maps,
+                   ssh_maps=ssh_maps,
           )
 
     summary = {
         "module": "nelaya_ai_tuna_depth_current_analysis",
-        "version": "0.8.1-alpha.1",
+        "version": "0.8.2-alpha.1",
         "status": "ready",
         "created_at": datetime.now(ZoneInfo("Asia/Jakarta")).isoformat(),
         "snapshot_date": date,
@@ -1675,6 +1950,7 @@ def main():
         "audit": audit,
         "vertical_diagnostics": vertical_diagnostics,
         "thermal_diagnostics": thermal_diagnostics,
+        "ssh_front_diagnostics": ssh_front_diagnostics,
         "confidence_breakdown": confidence_breakdown,
         "clustered_candidates": clustered_candidates,
         "layers": layer_summary,
