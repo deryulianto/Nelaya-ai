@@ -66,6 +66,9 @@ def health():
             data.get("composite", {}).get("score_stats", {}).get("max")
         )
         payload["hotspot"] = data.get("composite", {}).get("hotspot")
+        payload["confidence_breakdown"] = data.get("confidence_breakdown")
+        payload["thermal_diagnostics"] = data.get("thermal_diagnostics")
+        payload["audit"] = data.get("audit")
 
     return payload
 
@@ -98,6 +101,11 @@ def summary():
             "scientific_position": data.get("scientific_position"),
             "domain": data.get("domain"),
             "target_depths": data.get("target_depths"),
+            "audit": data.get("audit"),
+            "vertical_diagnostics": data.get("vertical_diagnostics"),
+            "thermal_diagnostics": data.get("thermal_diagnostics"),
+            "confidence_breakdown": data.get("confidence_breakdown"),
+            "clustered_candidates": data.get("clustered_candidates"),
             "layers": data.get("layers"),
             "species": data.get("species"),
             "composite": data.get("composite"),

@@ -24,6 +24,7 @@ os.environ.setdefault("MKL_NUM_THREADS", "1")
 
 ROOT = Path(".")
 IN_ROOT = ROOT / "data" / "raw" / "aceh_simeulue" / "cur_depth_nrt"
+THERMAL_ROOT = ROOT / "data" / "raw" / "aceh_simeulue" / "thermal_depth_nrt"
 OUT_DIR = ROOT / "data" / "physics"
 HISTORY_DIR = OUT_DIR / "history_tuna_depth_current"
 
@@ -370,6 +371,417 @@ def find_hotspot(lat: np.ndarray, lon: np.ndarray, score: np.ndarray, speed: np.
     }
 
 
+def clip01(x: Any, default: float = 0.0) -> float:
+    v = safe_float(x, default)
+    if v is None:
+        return default
+    return float(max(0.0, min(1.0, v)))
+
+
+def haversine_km(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    r = 6371.0
+    p1 = math.radians(lat1)
+    p2 = math.radians(lat2)
+    dp = math.radians(lat2 - lat1)
+    dl = math.radians(lon2 - lon1)
+    a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
+    return float(2 * r * math.asin(math.sqrt(max(0.0, min(1.0, a)))))
+
+
+def build_vertical_diagnostics(layers: dict[str, Any]) -> tuple[dict[str, Any], dict[str, np.ndarray]]:
+    """
+    v0.7.4:
+    Membaca kestabilan vertikal lapisan 30–100 m:
+    - speed_mean_30_100
+    - vertical_shear_per_m
+    - directional_coherence 0–1
+    """
+    keys = ["shallow_30m", "mid_50m", "deep_75m", "tuna_100m"]
+    keys = [k for k in keys if k in layers]
+
+    if len(keys) < 2:
+        empty = np.full_like(next(iter(layers.values()))["speed"], np.nan, dtype=float)
+        return {
+            "status": "insufficient_layers",
+            "depth_keys": keys,
+            "message": "Lapisan kedalaman tidak cukup untuk diagnostik vertikal.",
+        }, {
+            "speed_mean_30_100": empty,
+            "vertical_shear_per_m": empty,
+            "directional_coherence": empty,
+        }
+
+    u_stack = np.stack([layers[k]["u"] for k in keys], axis=0).astype(float)
+    v_stack = np.stack([layers[k]["v"] for k in keys], axis=0).astype(float)
+    speed_stack = np.stack([layers[k]["speed"] for k in keys], axis=0).astype(float)
+    depth_vals = np.array([layers[k]["actual_depth_m"] for k in keys], dtype=float)
+
+    speed_mean = np.nanmean(speed_stack, axis=0)
+
+    # Robust vertical shear:
+    # Pakai pasangan kedalaman valid paling dangkal dan paling dalam per-grid.
+    # Ini mencegah shear menjadi NaN hanya karena salah satu endpoint kosong.
+    ny, nx = speed_stack.shape[1], speed_stack.shape[2]
+    shear = np.full((ny, nx), np.nan, dtype=float)
+
+    for ii in range(ny):
+        for jj in range(nx):
+            valid_k = np.where(
+                np.isfinite(u_stack[:, ii, jj])
+                & np.isfinite(v_stack[:, ii, jj])
+                & np.isfinite(depth_vals)
+            )[0]
+
+            if valid_k.size < 2:
+                continue
+
+            k0 = int(valid_k[0])
+            k1 = int(valid_k[-1])
+            d_total = max(1e-6, float(abs(depth_vals[k1] - depth_vals[k0])))
+
+            du = float(u_stack[k1, ii, jj] - u_stack[k0, ii, jj])
+            dv = float(v_stack[k1, ii, jj] - v_stack[k0, ii, jj])
+            shear[ii, jj] = math.sqrt(du ** 2 + dv ** 2) / d_total
+
+    eps = 1e-9
+    unit_u = np.where(speed_stack > eps, u_stack / np.maximum(speed_stack, eps), np.nan)
+    unit_v = np.where(speed_stack > eps, v_stack / np.maximum(speed_stack, eps), np.nan)
+    coherence = np.sqrt(np.nanmean(unit_u, axis=0) ** 2 + np.nanmean(unit_v, axis=0) ** 2)
+    coherence = np.clip(coherence, 0.0, 1.0)
+    coherence[~np.isfinite(speed_mean)] = np.nan
+
+    maps = {
+        "speed_mean_30_100": speed_mean,
+        "vertical_shear_per_m": shear,
+        "directional_coherence": coherence,
+    }
+
+    summary = {
+        "status": "ready",
+        "depth_keys": keys,
+        "actual_depths_m": [safe_float(layers[k]["actual_depth_m"]) for k in keys],
+        "speed_mean_30_100_stats": stats(speed_mean),
+        "vertical_shear_per_m_stats": stats(shear),
+        "directional_coherence_stats": stats(coherence),
+        "interpretation": (
+            "Directional coherence mendekati 1 berarti arah arus antar-kedalaman relatif sejalan. "
+            "Vertical shear tinggi berarti lapisan arus lebih mudah berubah antar-kedalaman."
+        ),
+    }
+
+    return summary, maps
+
+
+def build_audit(
+    ds: xr.Dataset,
+    source_file: Path,
+    date: str,
+    layers: dict[str, Any],
+    lat: np.ndarray,
+    lon: np.ndarray,
+    composite: np.ndarray,
+    candidate_rank_score: np.ndarray,
+    thermal_diagnostics: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    depth_name = detect_coord(ds, ["depth", "depthu", "depthv", "lev"])
+    depth_vals: list[float] = []
+    if depth_name:
+        vals = np.asarray(ds[depth_name].values, dtype=float).ravel()
+        depth_vals = [float(x) for x in vals if np.isfinite(x)]
+
+    rank_valid = np.isfinite(candidate_rank_score)
+    composite_valid = np.isfinite(composite)
+
+    target_actuals = {
+        k: safe_float(v.get("actual_depth_m"))
+        for k, v in layers.items()
+    }
+
+    speed_keys = [k for k in ["shallow_30m", "mid_50m", "deep_75m", "tuna_100m"] if k in layers]
+    if speed_keys:
+        speed_stack = np.stack([layers[k]["speed"] for k in speed_keys], axis=0)
+        mean_speed_30_100 = np.nanmean(speed_stack, axis=0)
+    else:
+        mean_speed_30_100 = np.full_like(composite, np.nan, dtype=float)
+
+    grid_count = int(len(lat) * len(lon))
+    valid_grid_count = int(np.sum(rank_valid))
+
+    file_size_mb = None
+    try:
+        file_size_mb = round(source_file.stat().st_size / (1024 * 1024), 3)
+    except Exception:
+        pass
+
+    return {
+        "status": "ready",
+        "data_date": date,
+        "generated_at": datetime.now(ZoneInfo("Asia/Jakarta")).isoformat(),
+        "source_nc": str(source_file),
+        "source_nc_size_mb": file_size_mb,
+        "dataset_dims": {str(k): int(v) for k, v in ds.sizes.items()},
+        "data_vars": list(ds.data_vars),
+        "grid_shape": {
+            "lat": int(len(lat)),
+            "lon": int(len(lon)),
+            "cells": grid_count,
+        },
+        "available_depth_count": len(depth_vals),
+        "available_depth_min_m": safe_float(np.nanmin(depth_vals)) if depth_vals else None,
+        "available_depth_max_m": safe_float(np.nanmax(depth_vals)) if depth_vals else None,
+        "available_depths_m": depth_vals,
+        "target_depths_requested_m": TARGET_DEPTHS,
+        "target_depths_actual_m": target_actuals,
+        "target_depth_coverage_fraction": safe_float(len(target_actuals) / max(1, len(TARGET_DEPTHS))),
+        "valid_grid_count": valid_grid_count,
+        "missing_fraction_rank": safe_float(1.0 - valid_grid_count / max(1, grid_count)),
+        "valid_composite_count": int(np.sum(composite_valid)),
+        "speed_30_100_stats": stats(mean_speed_30_100),
+        "rank_score_stats": stats(candidate_rank_score),
+        "note": (
+            "Audit ini memeriksa kesiapan data uo/vo multi-kedalaman dan kualitas sinyal fisik. "
+            "Audit belum berarti kepastian ekologis atau hasil tangkapan."
+        ),
+    }
+
+
+def build_confidence_breakdown(
+    audit: dict[str, Any],
+    vertical_diagnostics: dict[str, Any],
+    composite: np.ndarray,
+    candidate_rank_score: np.ndarray,
+    thermal_diagnostics: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    missing = safe_float(audit.get("missing_fraction_rank"), 1.0)
+    data_availability = clip01(1.0 - (missing or 0.0))
+
+    depth_coverage = clip01(audit.get("target_depth_coverage_fraction"), 0.0)
+
+    rank_mean = safe_float(stats(candidate_rank_score).get("mean"), 0.0) or 0.0
+    rank_p90 = safe_float(stats(candidate_rank_score).get("p90"), 0.0) or 0.0
+    coherence_mean = safe_float(
+        (vertical_diagnostics.get("directional_coherence_stats") or {}).get("mean"),
+        0.0,
+    ) or 0.0
+
+    physical_signal = clip01(0.45 * rank_mean + 0.25 * rank_p90 + 0.30 * coherence_mean)
+
+    thermal_diagnostics = thermal_diagnostics or {}
+    thermal_ready = thermal_diagnostics.get("status") == "ready"
+    thermal_valid_fraction = safe_float(thermal_diagnostics.get("valid_fraction"), 0.0) or 0.0
+    thermal_score_mean = safe_float(
+        (thermal_diagnostics.get("thermal_score_stats") or {}).get("mean"),
+        0.0,
+    ) or 0.0
+
+    if thermal_ready:
+        ecological_confidence = clip01(0.35 + 0.15 * thermal_valid_fraction + 0.15 * thermal_score_mean)
+    else:
+        ecological_confidence = 0.35
+
+    # v0.8.0 belum mengunci gate keselamatan dari wave/wind/operational limits.
+    safety_confidence = 0.50
+
+    overall = clip01(
+        0.25 * data_availability
+        + 0.20 * depth_coverage
+        + 0.30 * physical_signal
+        + 0.15 * ecological_confidence
+        + 0.10 * safety_confidence
+    )
+
+    return {
+        "data_availability_confidence": round(data_availability, 3),
+        "depth_coverage_confidence": round(depth_coverage, 3),
+        "physical_signal_confidence": round(physical_signal, 3),
+        "ecological_confidence": round(ecological_confidence, 3),
+        "safety_confidence": round(safety_confidence, 3),
+        "overall_confidence": round(overall, 3),
+        "confidence_label": (
+            "tinggi" if overall >= 0.75 else
+            "sedang" if overall >= 0.55 else
+            "awal/perlu validasi"
+        ),
+        "notes": [
+            "Confidence fisik membaca data arus multi-kedalaman dan koherensi vertikal.",
+            "Confidence ekologis sengaja ditahan karena suhu bawah permukaan, oksigen terlarut, CHL/BGC, SSH/front, dan validasi tangkapan belum masuk.",
+            "Confidence keselamatan sengaja ditahan karena wave/wind gate belum digabungkan di layer ini.",
+        ],
+    }
+
+
+def build_clustered_candidates(
+    lat: np.ndarray,
+    lon: np.ndarray,
+    score: np.ndarray,
+    speed: np.ndarray,
+    threshold: float,
+    max_clusters: int = 7,
+    radius_km: float = 35.0,
+    max_points_scan: int = 500,
+    vertical_maps: dict[str, np.ndarray] | None = None,
+) -> list[dict[str, Any]]:
+    rows = []
+    for i in range(score.shape[0]):
+        for j in range(score.shape[1]):
+            sc = safe_float(score[i, j])
+            if sc is None or sc < threshold:
+                continue
+            rows.append({
+                "i": i,
+                "j": j,
+                "lat": float(lat[i]),
+                "lon": float(lon[j]),
+                "score": sc,
+                "speed_ms": safe_float(speed[i, j]),
+                "coherence": safe_float((vertical_maps or {}).get("directional_coherence", np.full_like(score, np.nan))[i, j]) if vertical_maps else None,
+                "shear_per_m": safe_float((vertical_maps or {}).get("vertical_shear_per_m", np.full_like(score, np.nan))[i, j]) if vertical_maps else None,
+            })
+
+    rows = sorted(rows, key=lambda r: r["score"], reverse=True)[:max_points_scan]
+
+    clusters: list[dict[str, Any]] = []
+
+    for r in rows:
+        chosen = None
+        chosen_dist = None
+
+        for c in clusters:
+            dist = haversine_km(r["lat"], r["lon"], c["centroid_lat"], c["centroid_lon"])
+            if dist <= radius_km and (chosen_dist is None or dist < chosen_dist):
+                chosen = c
+                chosen_dist = dist
+
+        if chosen is None:
+            if len(clusters) >= max_clusters:
+                continue
+
+            clusters.append({
+                "cluster_id": len(clusters) + 1,
+                "centroid_lat": r["lat"],
+                "centroid_lon": r["lon"],
+                "max_score": r["score"],
+                "mean_score": r["score"],
+                "mean_speed_ms": r["speed_ms"],
+                "top_lat": r["lat"],
+                "top_lon": r["lon"],
+                "top_speed_ms": r["speed_ms"],
+                "top_directional_coherence": r["coherence"],
+                "top_vertical_shear_per_m": r["shear_per_m"],
+                "member_count": 1,
+                "_sum_score": r["score"],
+                "_sum_speed": r["speed_ms"] or 0.0,
+                "_sum_weight": r["score"],
+                "_max_distance_km": 0.0,
+            })
+            continue
+
+        w_old = chosen["_sum_weight"]
+        w_new = max(1e-6, r["score"])
+        chosen["centroid_lat"] = (chosen["centroid_lat"] * w_old + r["lat"] * w_new) / (w_old + w_new)
+        chosen["centroid_lon"] = (chosen["centroid_lon"] * w_old + r["lon"] * w_new) / (w_old + w_new)
+        chosen["_sum_weight"] += w_new
+        chosen["_sum_score"] += r["score"]
+        chosen["_sum_speed"] += r["speed_ms"] or 0.0
+        chosen["member_count"] += 1
+        chosen["mean_score"] = chosen["_sum_score"] / chosen["member_count"]
+        chosen["mean_speed_ms"] = chosen["_sum_speed"] / chosen["member_count"]
+        chosen["_max_distance_km"] = max(chosen["_max_distance_km"], chosen_dist or 0.0)
+
+        if r["score"] > chosen["max_score"]:
+            chosen["max_score"] = r["score"]
+            chosen["top_lat"] = r["lat"]
+            chosen["top_lon"] = r["lon"]
+            chosen["top_speed_ms"] = r["speed_ms"]
+            chosen["top_directional_coherence"] = r["coherence"]
+            chosen["top_vertical_shear_per_m"] = r["shear_per_m"]
+
+    clusters = sorted(clusters, key=lambda c: c["max_score"], reverse=True)
+
+    clean = []
+    for idx, c in enumerate(clusters, start=1):
+        clean.append({
+            "cluster_id": idx,
+            "label": f"Koridor kandidat #{idx}",
+            "centroid_lat": safe_float(c["centroid_lat"]),
+            "centroid_lon": safe_float(c["centroid_lon"]),
+            "top_lat": safe_float(c["top_lat"]),
+            "top_lon": safe_float(c["top_lon"]),
+            "max_score": safe_float(c["max_score"]),
+            "mean_score": safe_float(c["mean_score"]),
+            "mean_speed_ms": safe_float(c["mean_speed_ms"]),
+            "top_speed_ms": safe_float(c["top_speed_ms"]),
+            "member_count": int(c["member_count"]),
+            "radius_km_est": safe_float(c["_max_distance_km"]),
+            "top_directional_coherence": safe_float(c["top_directional_coherence"]),
+            "top_vertical_shear_per_m": safe_float(c["top_vertical_shear_per_m"]),
+            "interpretation": (
+                "Klaster kandidat koridor arus kedalaman 30–100 m. "
+                "Gunakan bersama SST, CHL, SSH/front, bathymetry, FGI, cuaca, keselamatan, dan pengalaman nelayan."
+            ),
+        })
+
+    return clean
+
+
+def nearest_cluster_id(
+    lat0: float,
+    lon0: float,
+    clustered_candidates: list[dict[str, Any]] | None,
+    max_km: float = 45.0,
+) -> int | None:
+    if not clustered_candidates:
+        return None
+
+    best_id = None
+    best_dist = None
+    for c in clustered_candidates:
+        clat = safe_float(c.get("centroid_lat"))
+        clon = safe_float(c.get("centroid_lon"))
+        if clat is None or clon is None:
+            continue
+        d = haversine_km(lat0, lon0, clat, clon)
+        if best_dist is None or d < best_dist:
+            best_dist = d
+            best_id = c.get("cluster_id")
+
+    if best_dist is not None and best_dist <= max_km:
+        return int(best_id)
+    return None
+
+
+def candidate_reason(score: float | None, speed_ms: float | None, coherence: float | None, shear: float | None) -> str:
+    parts = []
+
+    if score is not None and score >= 0.85:
+        parts.append("Skor ranking kuat untuk koridor arus kedalaman.")
+    elif score is not None and score >= 0.72:
+        parts.append("Skor ranking masuk kandidat observasi.")
+    else:
+        parts.append("Sinyal masih perlu dibaca hati-hati.")
+
+    if speed_ms is not None:
+        parts.append(f"Kecepatan rata-rata lapisan kandidat sekitar {speed_ms:.3f} m/s.")
+
+    if coherence is not None:
+        if coherence >= 0.75:
+            parts.append("Arah arus antar-kedalaman cukup koheren.")
+        elif coherence >= 0.50:
+            parts.append("Koherensi arah arus sedang.")
+        else:
+            parts.append("Arah arus antar-kedalaman relatif berubah.")
+
+    if shear is not None:
+        if shear <= 0.004:
+            parts.append("Vertical shear relatif rendah.")
+        elif shear <= 0.008:
+            parts.append("Vertical shear sedang.")
+        else:
+            parts.append("Vertical shear cukup tinggi sehingga perlu kehati-hatian interpretasi.")
+
+    return " ".join(parts)
+
+
 def make_geojson(
     out_file: Path,
     lat: np.ndarray,
@@ -378,41 +790,72 @@ def make_geojson(
     speed: np.ndarray,
     threshold: float,
     max_points: int,
+    vertical_maps: dict[str, np.ndarray] | None = None,
+    clustered_candidates: list[dict[str, Any]] | None = None,
 ):
     rows = []
+    coh_map = (vertical_maps or {}).get("directional_coherence")
+    shear_map = (vertical_maps or {}).get("vertical_shear_per_m")
+
     for i in range(score.shape[0]):
         for j in range(score.shape[1]):
             sc = safe_float(score[i, j])
             if sc is None or sc < threshold:
                 continue
+
+            coherence = safe_float(coh_map[i, j]) if coh_map is not None else None
+            shear = safe_float(shear_map[i, j]) if shear_map is not None else None
+            sp = safe_float(speed[i, j])
+
             rows.append(
                 {
                     "lat": float(lat[i]),
                     "lon": float(lon[j]),
                     "score": sc,
-                    "speed_ms": safe_float(speed[i, j]),
+                    "speed_ms": sp,
+                    "directional_coherence": coherence,
+                    "vertical_shear_per_m": shear,
                 }
             )
 
     rows = sorted(rows, key=lambda r: r["score"], reverse=True)[:max_points]
 
-    features = [
-        {
-            "type": "Feature",
-            "geometry": {"type": "Point", "coordinates": [r["lon"], r["lat"]]},
-            "properties": {
-                "score": r["score"],
-                "speed_ms": r["speed_ms"],
-                "label": "Tuna depth current suitability candidate",
-                "scientific_caution": "Probabilistic current-depth signal, not a fish-location guarantee.",
-            },
-        }
-        for r in rows
-    ]
+    features = []
+    for r in rows:
+        cluster_id = nearest_cluster_id(r["lat"], r["lon"], clustered_candidates)
+
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": {"type": "Point", "coordinates": [r["lon"], r["lat"]]},
+                "properties": {
+                    "score": r["score"],
+                    "rank_score": r["score"],
+                    "speed_ms": r["speed_ms"],
+                    "directional_coherence": r["directional_coherence"],
+                    "vertical_shear_per_m": r["vertical_shear_per_m"],
+                    "cluster_id": cluster_id,
+                    "candidate_type": "current_depth_corridor",
+                    "depth_band": "30–100 m",
+                    "label": "Tuna depth current suitability candidate",
+                    "physical_reason": candidate_reason(
+                        r["score"],
+                        r["speed_ms"],
+                        r["directional_coherence"],
+                        r["vertical_shear_per_m"],
+                    ),
+                    "scientific_caution": (
+                        "Probabilistic current-depth signal, not a fish-location guarantee. "
+                        "Read together with SST, CHL, SSH/front, bathymetry, FGI, weather, safety, and fisher knowledge."
+                    ),
+                },
+            }
+        )
 
     geojson = {
         "type": "FeatureCollection",
         "name": "NELAYA-AI Tuna Depth Current Candidates",
+        "version": "0.8.0-alpha.1",
         "features": features,
     }
 
@@ -424,6 +867,7 @@ def make_geojson(
         "threshold": threshold,
         "point_count": len(features),
         "max_points": max_points,
+        "cluster_count": len(clustered_candidates or []),
     }
 
 
@@ -549,6 +993,225 @@ def build_composite(species_scores: dict[str, Any]) -> tuple[np.ndarray, np.ndar
     return composite, composite_speed
 
 
+
+def thermal_file_for_date(date: str) -> Path:
+    y, m, _ = date.split("-")
+    return THERMAL_ROOT / y / m / f"thermal_depth_nrt_aceh_{date}.nc"
+
+
+def read_thermal_h5(path: Path) -> dict[str, Any]:
+    """
+    Read CMEMS thetao NetCDF/HDF5 directly with h5py.
+
+    Why h5py?
+    Some thetao files trigger HDF5 dimension-scale errors when opened
+    through xarray/h5netcdf on this server:
+    RuntimeError: H5DSget_num_scales.
+    Direct h5py reading avoids dimension-scale parsing.
+    """
+    import h5py
+
+    with h5py.File(path, "r") as f:
+        required = ["thetao", "depth", "latitude", "longitude"]
+        missing = [k for k in required if k not in f]
+        if missing:
+            raise RuntimeError(f"Missing thermal datasets: {missing}. keys={list(f.keys())}")
+
+        thetao = np.asarray(f["thetao"][...], dtype=float)
+        depth = np.asarray(f["depth"][...], dtype=float).ravel()
+        lat = np.asarray(f["latitude"][...], dtype=float).ravel()
+        lon = np.asarray(f["longitude"][...], dtype=float).ravel()
+
+        attrs = {}
+        try:
+            attrs = {k: v.decode() if isinstance(v, bytes) else v for k, v in f["thetao"].attrs.items()}
+        except Exception:
+            attrs = {}
+
+    return {
+        "thetao": thetao,
+        "depth": depth,
+        "lat": lat,
+        "lon": lon,
+        "attrs": attrs,
+    }
+
+
+
+def clean_temperature_c(temp: np.ndarray, attrs: dict[str, Any] | None = None) -> np.ndarray:
+    """
+    Clean CMEMS thetao temperature array.
+
+    Some NetCDF/HDF5 files store missing values as very large fill values
+    around 1e20–1e36. These must be masked before statistics and scoring.
+    """
+    attrs = attrs or {}
+    arr = np.asarray(temp, dtype=float).copy()
+
+    fill_candidates = []
+    for key in ["_FillValue", "missing_value"]:
+        if key in attrs:
+            try:
+                fill_candidates.append(float(attrs[key]))
+            except Exception:
+                pass
+
+    for fv in fill_candidates:
+        arr[np.isclose(arr, fv, rtol=1e-6, atol=0.0)] = np.nan
+
+    # Physical sanity mask for ocean temperature in degrees Celsius.
+    # This removes CMEMS fill values even when attrs are not decoded cleanly.
+    arr[(arr < -5.0) | (arr > 45.0)] = np.nan
+
+    return arr
+
+
+def thermal_suitability_score(temp_c: np.ndarray) -> np.ndarray:
+    """
+    Broad tropical large-pelagic thermal gate for v0.8.0-alpha.1.
+
+    Interpretation:
+    - This is not species-specific tuna habitat certainty.
+    - It only checks whether 30–100 m temperature is physically plausible
+      for tropical pelagic corridor reading.
+    """
+    t = clean_temperature_c(temp_c)
+    out = np.zeros_like(t, dtype=float)
+
+    cold0 = 12.0
+    opt_lo = 20.0
+    opt_hi = 29.5
+    warm1 = 32.5
+
+    m = (t >= cold0) & (t < opt_lo)
+    out[m] = (t[m] - cold0) / max(1e-9, opt_lo - cold0)
+
+    m = (t >= opt_lo) & (t <= opt_hi)
+    out[m] = 1.0
+
+    m = (t > opt_hi) & (t <= warm1)
+    out[m] = 1.0 - (t[m] - opt_hi) / max(1e-9, warm1 - opt_hi)
+
+    out[~np.isfinite(t)] = np.nan
+    return np.clip(out, 0.0, 1.0)
+
+
+def build_thermal_diagnostics(
+    date: str,
+    current_lat: np.ndarray,
+    current_lon: np.ndarray,
+) -> tuple[dict[str, Any], dict[str, np.ndarray]]:
+    """
+    Optional v0.8.0 thermal layer using direct h5py reading.
+    If thetao file is missing or incompatible, builder must still run.
+    """
+    path = thermal_file_for_date(date)
+
+    empty = {
+        "thermal_score": np.full((len(current_lat), len(current_lon)), np.nan, dtype=float),
+        "temperature_mean_30_100_c": np.full((len(current_lat), len(current_lon)), np.nan, dtype=float),
+    }
+
+    if not path.exists():
+        return {
+            "status": "missing",
+            "source_file": str(path),
+            "message": "Thermal thetao file belum tersedia; v0.8.0 kembali memakai current-depth physics only.",
+        }, empty
+
+    try:
+        raw = read_thermal_h5(path)
+        thetao = raw["thetao"]
+        depths = raw["depth"]
+        thermal_lat = raw["lat"]
+        thermal_lon = raw["lon"]
+        attrs = raw.get("attrs", {})
+
+        # Expected thetao shape: time, depth, latitude, longitude
+        if thetao.ndim == 4:
+            thetao_3d = thetao[0, :, :, :]
+        elif thetao.ndim == 3:
+            thetao_3d = thetao
+        else:
+            return {
+                "status": "invalid",
+                "source_file": str(path),
+                "message": f"Dimensi thetao tidak dikenali: shape={thetao.shape}",
+            }, empty
+
+        if len(thermal_lat) != len(current_lat) or len(thermal_lon) != len(current_lon):
+            return {
+                "status": "grid_mismatch",
+                "source_file": str(path),
+                "thermal_grid_shape": {
+                    "lat": int(len(thermal_lat)),
+                    "lon": int(len(thermal_lon)),
+                },
+                "current_grid_shape": {
+                    "lat": int(len(current_lat)),
+                    "lon": int(len(current_lon)),
+                },
+                "message": "Grid thermal belum sama dengan grid current; interpolasi belum diaktifkan pada v0.8.0-alpha.1.",
+            }, empty
+
+        keys = ["shallow_30m", "mid_50m", "deep_75m", "tuna_100m"]
+        temp_layers = []
+        layer_summary = {}
+
+        for key in keys:
+            target_depth = TARGET_DEPTHS[key]
+            depth_idx, actual_depth = nearest_depth(depths, target_depth)
+
+            temp = clean_temperature_c(
+                np.asarray(thetao_3d[depth_idx, :, :], dtype=float),
+                attrs,
+            )
+            temp_layers.append(temp)
+
+            layer_summary[key] = {
+                "target_depth_m": target_depth,
+                "actual_depth_m": actual_depth,
+                "temperature_stats_c": stats(temp),
+            }
+
+        temp_stack = np.stack(temp_layers, axis=0)
+        temp_mean = np.nanmean(temp_stack, axis=0)
+
+        score_stack = np.stack([thermal_suitability_score(t) for t in temp_layers], axis=0)
+        thermal_score = np.nanmean(score_stack, axis=0)
+
+        maps = {
+            "thermal_score": thermal_score,
+            "temperature_mean_30_100_c": temp_mean,
+        }
+
+        valid = np.isfinite(thermal_score)
+
+        return {
+            "status": "ready",
+            "version": "0.8.0-alpha.1",
+            "source_file": str(path),
+            "variable": "thetao",
+            "units": attrs.get("units") or attrs.get("unit_long") or "degrees_C",
+            "target_depth_layers": layer_summary,
+            "temperature_mean_30_100_stats_c": stats(temp_mean),
+            "thermal_score_stats": stats(thermal_score),
+            "valid_grid_count": int(np.sum(valid)),
+            "valid_fraction": safe_float(np.sum(valid) / max(1, thermal_score.size)),
+            "interpretation": (
+                "Thermal diagnostics membaca suhu bawah permukaan 30–100 m sebagai gate ekologis awal. "
+                "Ini belum memasukkan dissolved oxygen, CHL/BGC, SSH/front, atau validasi tangkapan."
+            ),
+        }, maps
+
+    except Exception as exc:
+        return {
+            "status": "error",
+            "source_file": str(path),
+            "message": f"Gagal membaca thermal thetao via h5py: {type(exc).__name__}: {exc}",
+        }, empty
+
+
 def make_dashboard_png(
     out_png: Path,
     date: str,
@@ -576,7 +1239,7 @@ def make_dashboard_png(
     gs = fig.add_gridspec(2, 2, width_ratios=[0.95, 1.45], height_ratios=[1, 1], wspace=0.28, hspace=0.34)
 
     fig.suptitle(
-        f"NELAYA-AI — Tuna Depth Current Layer v0.7.3\nPerairan Aceh · Copernicus CMEMS · {date}",
+        f"NELAYA-AI — Tuna Depth Current Layer v0.8.0-alpha.1\nPerairan Aceh · Copernicus CMEMS · {date}",
         fontsize=14,
         fontweight="bold",
         y=0.98,
@@ -738,7 +1401,7 @@ def main():
     date = extract_date(f) or args.date or datetime.now(ZoneInfo("Asia/Jakarta")).strftime("%Y-%m-%d")
 
     print("=" * 78)
-    print("NELAYA-AI Tuna Depth Current Analysis v0.7.3")
+    print("NELAYA-AI Tuna Depth Current Analysis v0.8.0")
     print("=" * 78)
     print(f"Input : {f}")
     print(f"Date  : {date}")
@@ -755,6 +1418,42 @@ def main():
           )
 
     comp_hotspot = find_hotspot(lat, lon, candidate_rank_score, composite_speed)
+
+    vertical_diagnostics, vertical_maps = build_vertical_diagnostics(layers)
+    thermal_diagnostics, thermal_maps = build_thermal_diagnostics(
+        date=date,
+        current_lat=lat,
+        current_lon=lon,
+    )
+    audit = build_audit(
+        ds=ds,
+        source_file=f,
+        date=date,
+        layers=layers,
+        lat=lat,
+        lon=lon,
+        composite=composite,
+        candidate_rank_score=candidate_rank_score,
+        thermal_diagnostics=thermal_diagnostics,
+    )
+    confidence_breakdown = build_confidence_breakdown(
+        audit=audit,
+        vertical_diagnostics=vertical_diagnostics,
+        composite=composite,
+        candidate_rank_score=candidate_rank_score,
+        thermal_diagnostics=thermal_diagnostics,
+    )
+    clustered_candidates = build_clustered_candidates(
+        lat=lat,
+        lon=lon,
+        score=candidate_rank_score,
+        speed=composite_speed,
+        threshold=args.geojson_threshold,
+        max_clusters=7,
+        radius_km=35.0,
+        max_points_scan=args.max_points,
+        vertical_maps=vertical_maps,
+    )
 
     layer_summary = {}
     for k, item in layers.items():
@@ -788,11 +1487,13 @@ def main():
                     speed=composite_speed,
                     threshold=args.geojson_threshold,
                    max_points=args.max_points,
+                   vertical_maps=vertical_maps,
+                   clustered_candidates=clustered_candidates,
           )
 
     summary = {
         "module": "nelaya_ai_tuna_depth_current_analysis",
-        "version": "0.7.3-alpha.1",
+        "version": "0.8.0-alpha.1",
         "status": "ready",
         "created_at": datetime.now(ZoneInfo("Asia/Jakarta")).isoformat(),
         "snapshot_date": date,
@@ -807,6 +1508,11 @@ def main():
             "lon_max": float(np.nanmax(lon)),
         },
         "target_depths": TARGET_DEPTHS,
+        "audit": audit,
+        "vertical_diagnostics": vertical_diagnostics,
+        "thermal_diagnostics": thermal_diagnostics,
+        "confidence_breakdown": confidence_breakdown,
+        "clustered_candidates": clustered_candidates,
         "layers": layer_summary,
         "species": species_summary,
         "composite": {
