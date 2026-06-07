@@ -59,6 +59,9 @@ mount("app.routers.me", prefix="")
 mount("app.routers.fgi", prefix="")
 mount("app.routers.fgi", prefix="/api/v1")
 
+# ✅ NEW: FGI Pattern & Forecast v0.1
+mount("app.routers.fgi_forecast", prefix="")
+
 # ✅ NEW: FGI Species API v0.4.1
 mount("app.routers.fgi_species", prefix="")
 
@@ -67,6 +70,23 @@ mount("app.routers.fgi_feature_store", prefix="")
 
 # ✅ NEW: Field Validation Database v0.1
 mount("app.routers.field_feedback", prefix="")
+
+# ✅ NEW: Economic Intelligence Layer v0.1
+mount("app.routers.economic", prefix="")
+mount("app.routers.economic", prefix="/api/v1")
+
+# ✅ NEW: Marketplace Snapshot v0.1
+mount("app.routers.marketplace", prefix="")
+mount("app.routers.marketplace", prefix="/api/v1")
+
+# ✅ NEW: Traceability Preview v0.1
+mount("app.routers.traceability", prefix="")
+mount("app.routers.traceability", prefix="/api/v1")
+
+# ✅ NEW: Supply Chain Health v0.1
+mount("app.routers.supply_chain", prefix="")
+mount("app.routers.supply_chain", prefix="/api/v1")
+
 
 # ✅ NEW: FGI Species Grid v0.5.1
 mount("app.routers.fgi_species_grid", prefix="")
@@ -137,6 +157,23 @@ mount("app.routers.fgi_legal_aoi", prefix="")
 # -----------------------------------------------------------------------------
 # OCEAN INTELLIGENCE ROUTERS
 # -----------------------------------------------------------------------------
+
+# ✅ NEW: Ocean Data Health / Mini Digital Twin Foundation v0.1
+mount("app.routers.ocean_health", prefix="")
+
+# ✅ NEW: Ocean Data Health / Mini Digital Twin Foundation v0.1
+mount("app.routers.ocean_health", prefix="")
+
+# ✅ NEW: Ocean Confidence Layer / Anti-Halu Guardrail v0.1
+mount("app.routers.ocean_confidence", prefix="")
+mount("app.routers.ocean_readiness", prefix="")
+mount("app.routers.insight_guardrail", prefix="")
+mount("app.routers.guarded_insight", prefix="")
+mount("app.routers.insight_lint", prefix="")
+mount("app.routers.safe_insight", prefix="")
+mount("app.routers.ocean_system_snapshot", prefix="")
+mount("app.routers.ocean_system_card", prefix="")
+
 mount("app.routers.osi_v1", prefix="")
 mount("app.routers.osi_today", prefix="")
 mount("app.routers.osi_map", prefix="")
