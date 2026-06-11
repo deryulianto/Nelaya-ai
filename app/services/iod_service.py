@@ -5,24 +5,17 @@ from pathlib import Path
 from typing import Any
 
 
-IOD_OPERATIONAL_CANDIDATES = [
+OPERATIONAL_PATHS = [
+    Path("data/regional/iod/latest_iod.json"),
     Path("data/earth/iod_today.json"),
     Path("data/iod_today.json"),
 ]
 
-IOD_HISTORICAL_CANDIDATES = [
+HISTORICAL_PATHS = [
+    Path("data/regional/iod/latest_iod.json"),
     Path("data/earth/iod_historical_latest.json"),
     Path("data/iod_historical_latest.json"),
 ]
-
-
-def load_json_if_exists(path: Path) -> dict[str, Any] | None:
-    try:
-        if path.exists():
-            return json.loads(path.read_text(encoding="utf-8"))
-    except Exception:
-        return None
-    return None
 
 
 def classify_iod(dmi: float | None) -> str:
@@ -38,87 +31,114 @@ def classify_iod(dmi: float | None) -> str:
 def iod_strength(dmi: float | None) -> str:
     if dmi is None:
         return "unknown"
-    a = abs(dmi)
+
+    a = abs(float(dmi))
     if a >= 1.0:
         return "strong"
-    if a >= 0.6:
+    if a >= 0.7:
         return "moderate"
     if a >= 0.4:
         return "weak"
     return "neutral"
 
 
-def normalize_iod_payload(data: dict[str, Any], default_mode: str) -> dict[str, Any]:
+def _read_json_first(paths: list[Path]) -> tuple[dict[str, Any] | None, str | None]:
+    for path in paths:
+        if not path.exists():
+            continue
+
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+
+        if isinstance(data, dict):
+            return data, str(path)
+
+    return None, None
+
+
+def normalize_iod_payload(data: dict[str, Any], default_mode: str, source_path: str | None = None) -> dict[str, Any]:
     dmi_raw = data.get("dmi")
+
     try:
         dmi = float(dmi_raw) if dmi_raw is not None else None
-    except (TypeError, ValueError):
+    except Exception:
         dmi = None
 
-    status = data.get("status")
-    if not isinstance(status, str) or not status.strip():
+    status = str(data.get("status") or "").strip().lower()
+    if not status or status in {"none", "null", "unknown"}:
         status = classify_iod(dmi)
 
-    strength = data.get("strength")
-    if not isinstance(strength, str) or not strength.strip():
+    strength = str(data.get("strength") or "").strip().lower()
+    if not strength or strength in {"none", "null", "unknown"}:
         strength = iod_strength(dmi)
 
-    return {
-        "mode": data.get("mode", default_mode),
-        "date": data.get("date"),
-        "dmi": round(dmi, 3) if dmi is not None else None,
+    # Preserve metadata dari updater JMA baru agar UI bisa membaca freshness/lag.
+    payload: dict[str, Any] = {
+        "module": data.get("module") or "regional_climate_iod",
+        "version": data.get("version") or "1.0.0",
+        "mode": data.get("mode") or default_mode,
         "status": status,
+        "dmi": round(dmi, 3) if dmi is not None else None,
         "strength": strength,
-        "generated_at": data.get("generated_at"),
+        "date": data.get("date") or data.get("period") or data.get("source_date"),
+        "source_date": data.get("source_date") or data.get("date"),
+        "updated_at": data.get("updated_at"),
         "source": data.get("source"),
-        "notes": data.get("notes"),
+        "source_url": data.get("source_url"),
+        "source_path": source_path,
+        "cadence": data.get("cadence") or "monthly",
+        "staleness_days": data.get("staleness_days"),
+        "freshness": data.get("freshness"),
+        "thresholds": data.get("thresholds"),
+        "use_in_fgi_modifier": data.get("use_in_fgi_modifier", True),
+        "narrative": data.get("narrative"),
     }
+
+    return {k: v for k, v in payload.items() if v is not None}
 
 
 def load_iod_operational() -> dict[str, Any] | None:
-    for path in IOD_OPERATIONAL_CANDIDATES:
-        data = load_json_if_exists(path)
-        if isinstance(data, dict):
-            return normalize_iod_payload(data, default_mode="operational")
-    return None
+    data, source_path = _read_json_first(OPERATIONAL_PATHS)
+    if not data:
+        return None
+    return normalize_iod_payload(data, default_mode="operational", source_path=source_path)
 
 
 def load_iod_historical_latest() -> dict[str, Any] | None:
-    for path in IOD_HISTORICAL_CANDIDATES:
-        data = load_json_if_exists(path)
-        if isinstance(data, dict):
-            return normalize_iod_payload(data, default_mode="historical")
-    return None
+    data, source_path = _read_json_first(HISTORICAL_PATHS)
+    if not data:
+        return None
+    return normalize_iod_payload(data, default_mode="historical", source_path=source_path)
 
 
 def build_iod_narrative(iod: dict[str, Any] | None) -> str:
     if not iod:
-        return "Data IOD belum tersedia."
+        return (
+            "IOD belum tersedia. NELAYA-AI tetap membaca kondisi laut Aceh "
+            "berdasarkan sinyal lokal seperti SST, CHL, arus, angin, gelombang, "
+            "salinitas, SSH, dan FGI."
+        )
+
+    if iod.get("narrative"):
+        return str(iod["narrative"])
 
     status = str(iod.get("status") or "unknown").lower()
     dmi = iod.get("dmi")
-    date = iod.get("date")
+    period = iod.get("date") or iod.get("source_date") or "periode terbaru"
 
     if status == "positive":
-        return (
-            f"IOD berada pada fase positif"
-            f"{f' dengan DMI {dmi}' if dmi is not None else ''}"
-            f"{f' per {date}' if date else ''}. "
-            "Ini memberi konteks regional yang dapat memengaruhi dinamika laut Indonesia bagian barat."
-        )
-    if status == "negative":
-        return (
-            f"IOD berada pada fase negatif"
-            f"{f' dengan DMI {dmi}' if dmi is not None else ''}"
-            f"{f' per {date}' if date else ''}. "
-            "Konteks regional ini perlu dibaca bersama sinyal lokal perairan Aceh."
-        )
-    if status == "neutral":
-        return (
-            f"IOD berada pada kondisi netral"
-            f"{f' dengan DMI {dmi}' if dmi is not None else ''}"
-            f"{f' per {date}' if date else ''}. "
-            "Artinya pembacaan harian lebih bertumpu pada sinyal lokal."
-        )
+        phase = "IOD positif"
+    elif status == "negative":
+        phase = "IOD negatif"
+    elif status == "neutral":
+        phase = "IOD netral"
+    else:
+        phase = "IOD belum jelas"
 
-    return "Status IOD belum dapat ditentukan secara meyakinkan."
+    dmi_text = f" dengan DMI {dmi} °C" if dmi is not None else ""
+    return (
+        f"{phase} pada {period}{dmi_text}. "
+        "IOD dibaca sebagai konteks iklim regional Samudra Hindia, bukan prediksi harian lokal Aceh."
+    )
