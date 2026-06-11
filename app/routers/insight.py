@@ -15,6 +15,7 @@ from app.services.fgi_modifier import (
 )
 from app.services.insight_engine import build_daily_ocean_insight
 from app.services.iod_service import load_iod_operational
+from app.services.enso_service import load_enso_operational
 
 router = APIRouter(prefix="/insight", tags=["insight"])
 
@@ -231,6 +232,7 @@ def compute_core_fgi_via_api(
 def get_insight_today():
     earth = load_earth_today() or {}
     iod = load_iod_operational() or {}
+    enso = load_enso_operational() or {}
 
     sst = pick_metric(
         earth,
@@ -347,6 +349,7 @@ def get_insight_today():
         },
         "classification": insight["classification"],
         "iod": iod,
+        "enso": enso,
         "fgi": {
             "core": core_fgi,
             "core_source": core_fgi_source,
