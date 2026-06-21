@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LAOT Edisi 001 — Editorial v02 Halaman 1-4</title>
+<style>
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+:root{
+  --green:#003b32;
+  --green2:#0b5b4d;
+  --gold:#d99a19;
+  --cream:#f6f1e7;
+  --paper:#fffaf0;
+  --ink:#191919;
+  --muted:#626262;
+  --line:#d8c9ad;
+  --red:#b6242b;
+}
+body{
+  margin:0;
+  background:#d8d8d8;
+  color:var(--ink);
+  font-family: Georgia, "Times New Roman", serif;
+}
+.page{
+  width:210mm;
+  height:297mm;
+  margin:10mm auto;
+  background:var(--paper);
+  position:relative;
+  overflow:hidden;
+  box-shadow:0 4px 16px rgba(0,0,0,.22);
+}
+.topbar{
+  height:17mm;
+  background:var(--green);
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 13mm;
+  border-bottom:2mm solid var(--gold);
+  font-family: Arial, sans-serif;
+}
+.brand{
+  font-family: Georgia, serif;
+  font-size:25pt;
+  font-weight:900;
+  letter-spacing:1px;
+}
+.brand span{ color:var(--gold); }
+.topbar .meta{
+  font-size:8pt;
+  text-align:right;
+  line-height:1.4;
+  letter-spacing:.5px;
+}
+.issue-pill{
+  background:#eee;
+  color:#222;
+  border-radius:0 0 0 10mm;
+  padding:8mm 10mm;
+  min-width:42mm;
+  text-align:center;
+  font-family:Arial,sans-serif;
+  font-weight:800;
+}
+.issue-pill .num{font-size:30pt;line-height:.9;}
+.issue-pill .small{font-size:8pt;color:#333;letter-spacing:.8px;}
+.cover-hero{
+  height:142mm;
+  margin:0 13mm;
+  position:relative;
+  background:
+    linear-gradient(to bottom, rgba(255,250,240,0) 40%, var(--paper) 98%),
+    url("../../assets/screenshots/05_gis_umum_laut_aceh.png");
+  background-size:cover;
+  background-position:center;
+  border-bottom:1px solid var(--line);
+}
+.cover-title{
+  position:absolute;
+  left:0;
+  bottom:-12mm;
+  width:135mm;
+  font-size:45pt;
+  line-height:.95;
+  font-weight:900;
+  letter-spacing:-1.5px;
+  text-shadow:0 1px 0 rgba(255,255,255,.7);
+}
+.cover-title .red{color:var(--red);}
+.cover-side{
+  position:absolute;
+  right:0;
+  bottom:-8mm;
+  width:42mm;
+  font-family:Arial,sans-serif;
+}
+.teaser{
+  border-left:5px solid var(--red);
+  padding:2mm 0 4mm 4mm;
+  margin-bottom:4mm;
+  font-size:15pt;
+  line-height:1.1;
+  font-weight:900;
+}
+.cover-deck{
+  position:absolute;
+  left:13mm;
+  right:13mm;
+  bottom:18mm;
+  display:grid;
+  grid-template-columns:1.4fr .8fr;
+  gap:10mm;
+  align-items:end;
+}
+.cover-deck p{
+  font-size:13pt;
+  line-height:1.45;
+  margin:0;
+}
+.quote{
+  border-top:2px solid var(--green);
+  border-bottom:2px solid var(--green);
+  padding:5mm 2mm;
+  text-align:center;
+  font-size:16pt;
+  line-height:1.25;
+  font-style:italic;
+  color:var(--green);
+}
+.footer-strip{
+  position:absolute;
+  left:0;right:0;bottom:0;
+  height:10mm;
+  background:var(--green);
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 13mm;
+  font-family:Arial,sans-serif;
+  font-size:7pt;
+  letter-spacing:.4px;
+}
+.footer-strip b{ color:var(--gold); }
+
+.header{
+  height:19mm;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 13mm;
+  border-bottom:1.5mm solid var(--gold);
+  background:var(--green);
+  color:white;
+  font-family:Arial,sans-serif;
+}
+.header .brand{font-size:20pt;}
+.header .title{
+  font-size:9pt;
+  font-weight:800;
+  letter-spacing:.5px;
+}
+.header .page-no{
+  width:13mm;height:13mm;border-radius:50%;
+  background:var(--red);
+  display:grid;place-items:center;
+  font-weight:900;font-size:15pt;
+}
+.content{
+  padding:10mm 13mm 16mm 13mm;
+}
+.kicker{
+  font-family:Arial,sans-serif;
+  color:var(--red);
+  text-transform:uppercase;
+  font-weight:900;
+  letter-spacing:2px;
+  font-size:9pt;
+  margin-bottom:4mm;
+}
+h1{
+  margin:0 0 5mm 0;
+  font-size:35pt;
+  line-height:1.05;
+  letter-spacing:-.8px;
+}
+h2{
+  margin:0 0 4mm 0;
+  font-size:23pt;
+  line-height:1.12;
+}
+.deck{
+  font-size:14pt;
+  line-height:1.45;
+  color:#333;
+  margin-bottom:6mm;
+  font-style:italic;
+}
+.article-2col{
+  columns:2;
+  column-gap:8mm;
+  column-rule:1px solid var(--line);
+  font-size:11.2pt;
+  line-height:1.55;
+  text-align:justify;
+}
+.article-3col{
+  columns:3;
+  column-gap:6mm;
+  column-rule:1px solid var(--line);
+  font-size:10.3pt;
+  line-height:1.5;
+  text-align:justify;
+}
+.article-2col p,
+.article-3col p{ margin:0 0 4mm 0; }
+.drop:first-letter{
+  float:left;
+  font-size:48pt;
+  line-height:.8;
+  color:var(--red);
+  padding-right:2mm;
+}
+.byline{
+  font-family:Arial,sans-serif;
+  font-size:8pt;
+  color:var(--muted);
+  margin-bottom:5mm;
+}
+.box{
+  break-inside:avoid;
+  border-top:7mm solid var(--green);
+  background:#f1eadb;
+  padding:4mm;
+  margin:5mm 0;
+  font-family:Arial,sans-serif;
+}
+.box h3{
+  margin:-10mm 0 4mm 0;
+  color:white;
+  font-size:11pt;
+  letter-spacing:.7px;
+  text-transform:uppercase;
+}
+.box ul{ margin:0; padding-left:5mm; font-size:9pt; line-height:1.45; }
+.box p{font-size:9pt;line-height:1.45;margin:0;}
+.factbox{
+  border:1px solid var(--line);
+  background:#f4d7cf;
+  padding:4mm;
+  font-family:Arial,sans-serif;
+  break-inside:avoid;
+}
+.factbox h3{
+  margin:0 0 3mm 0;
+  background:#222;
+  color:white;
+  padding:2mm 3mm;
+  font-size:13pt;
+  text-align:center;
+  text-transform:uppercase;
+}
+.factbox ol{
+  margin:0;
+  padding-left:5mm;
+  font-size:9pt;
+  line-height:1.45;
+}
+.photo{
+  margin:0 0 5mm 0;
+  break-inside:avoid;
+}
+.photo img{
+  width:100%;
+  display:block;
+  border:1px solid #ccc;
+}
+.caption{
+  font-family:Arial,sans-serif;
+  font-size:7.5pt;
+  line-height:1.3;
+  color:#444;
+  margin-top:1.5mm;
+}
+.page3-hero{
+  height:82mm;
+  background:url("../../assets/screenshots/05_gis_umum_laut_aceh.png");
+  background-size:cover;
+  background-position:center;
+  margin-bottom:5mm;
+  border:1px solid #ccc;
+}
+.split{
+  display:grid;
+  grid-template-columns:1.1fr .8fr;
+  gap:7mm;
+}
+.section-title{
+  font-size:14pt;
+  color:var(--red);
+  font-weight:900;
+  margin:5mm 0 2mm;
+}
+.timeline{
+  font-family:Arial,sans-serif;
+  font-size:8.4pt;
+  line-height:1.35;
+}
+.timeline div{
+  border-bottom:1px solid var(--line);
+  padding:2mm 0;
+}
+.timeline b{color:var(--green);}
+.note{
+  font-family:Arial,sans-serif;
+  font-size:8.6pt;
+  background:#e7f3ec;
+  border-left:4px solid var(--green2);
+  padding:3mm;
+  margin-top:4mm;
+}
+</style>
+</head>
+<body>
+
+<!-- PAGE 1 -->
+<section class="page">
+  <div class="topbar">
+    <div>
+      <div class="brand">L<span>A</span>OT</div>
+      <div style="font-family:Arial,sans-serif;font-size:8pt;letter-spacing:1px">TABLOID LAUT ACEH · NELAYA-AI</div>
+    </div>
+    <div class="issue-pill">
+      <div class="small">EDISI</div>
+      <div class="num">001</div>
+      <div class="small">15–21 JUNI 2026</div>
+      <div style="font-size:13pt;color:#b6242b;margin-top:2mm;transform:rotate(-8deg)">PERDANA</div>
+    </div>
+  </div>
+
+  <div class="cover-hero">
+    <div class="cover-title">
+      Membaca Laut Aceh<br>
+      <span class="red">Sepekan Penuh</span>
+    </div>
+    <div class="cover-side">
+      <div class="teaser">Peluang Ada, Laut Meminta Hati-hati</div>
+      <div class="teaser">Sinyal Menguat pada 16 Juni</div>
+      <div class="teaser">Zona Kembali ke Laut Dalam</div>
+    </div>
+  </div>
+
+  <div class="cover-deck">
+    <p><b>LAOT Edisi Perdana</b> membaca dinamika laut Aceh pada 15–21 Juni 2026. Dalam tujuh hari, sinyal laut bergerak: muncul sebagai tanda awal, menguat, menyebar, menyempit, lalu kembali bergeser ke laut dalam.</p>
+    <div class="quote">“Laut memberi tanda, tetapi tidak memberi janji.”</div>
+  </div>
+
+  <div class="footer-strip">
+    <span>nelaya-ai.com · Banda Aceh</span>
+    <b>OCEAN INTELLIGENCE · PUBLIC READING</b>
+    <span>Halaman 1</span>
+  </div>
+</section>
+
+<!-- PAGE 2 -->
+<section class="page">
+  <div class="header">
+    <div class="page-no">2</div>
+    <div class="title">SALAM REDAKSI · EDISI 001</div>
+    <div class="brand">L<span>A</span>OT</div>
+  </div>
+
+  <div class="content">
+    <div class="kicker">Salam Redaksi</div>
+    <h1>Membaca Laut Bukan Menaklukkan Laut</h1>
+    <div class="deck">LAOT hadir sebagai ruang baca mingguan: data tetap menjadi dasar, tetapi narasi memberi jalan agar pembaca tidak tersesat dalam angka.</div>
+
+    <div class="article-2col drop">
+      <p>LAOT lahir dari satu kesadaran sederhana: laut tidak cukup dibaca dari satu angka. Laut Aceh bergerak setiap hari. Suhu berubah, klorofil naik turun, angin membentuk pola, gelombang menguji keselamatan, arus membawa massa air, dan kedalaman menyimpan tanda yang tidak selalu tampak di permukaan.</p>
+
+      <p>Selama ini, data laut sering berhenti di dashboard. Ia ada, tetapi tidak selalu mudah dipahami oleh pembaca umum. Nelayan membaca laut dengan pengalaman panjang, pemerintah memerlukan dasar kebijakan, akademisi mencari pola, dan masyarakat pesisir membutuhkan bahasa yang lebih dekat dengan kehidupan sehari-hari. Di ruang itulah LAOT ingin hadir.</p>
+
+      <p>LAOT bukan pengganti NELAYA-AI. NELAYA-AI adalah dapur data dan mesin pembacaan laut. LAOT adalah ruang baca mingguan yang menyusun kembali tanda-tanda itu menjadi cerita yang lebih utuh. Data tetap menjadi dasar, tetapi narasi memberi jalan agar pembaca tidak tersesat dalam angka.</p>
+
+      <p>Edisi perdana ini membaca periode 15–21 Juni 2026. Selama sepekan, laut Aceh memperlihatkan dinamika yang menarik. Sinyal awal muncul pada 15 Juni. Pada 16 Juni, pembacaan menguat dan menjadi puncak mingguan. Pada 17 Juni, zona menyebar. Pada 18–19 Juni, sinyal menyempit ke ruang yang lebih dangkal. Pada 20–21 Juni, tanda kembali bergerak ke laut dalam.</p>
+
+      <p>Namun LAOT tidak ingin mengubah tanda menjadi janji. Hotspot bukan titik pasti penangkapan. FGI bukan jaminan hasil. Risiko pesisir bukan peringatan resmi. Setiap pembacaan tetap harus bertemu dengan pengalaman nelayan, keselamatan kapal, kondisi cuaca lokal, arahan otoritas, dan rasa hormat kepada laut.</p>
+
+      <p>Karena itu, edisi perdana ini bukan hanya laporan data. Ia adalah ajakan untuk membaca laut dengan lebih sabar. Laut memberi tanda, tetapi tidak pernah berjanji. Tugas kita bukan menaklukkan laut, melainkan memahami geraknya, menjaga kehidupan di dalamnya, dan mengambil keputusan dengan lebih bijaksana.</p>
+
+      <div class="box">
+        <h3>Kalimat Edisi Ini</h3>
+        <p><b>“Laut memberi tanda, tetapi tidak memberi janji.”</b><br>Kalimat ini menjadi pagar redaksi LAOT Edisi Perdana: data membantu membaca, bukan memaksa laut memberi kepastian.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-strip">
+    <span>Salam Redaksi</span>
+    <b>DATA · NARASI · KEHATI-HATIAN</b>
+    <span>Halaman 2</span>
+  </div>
+</section>
+
+<!-- PAGE 3 -->
+<section class="page">
+  <div class="header">
+    <div class="brand">L<span>A</span>OT</div>
+    <div class="title">LAPORAN UTAMA</div>
+    <div class="page-no">3</div>
+  </div>
+
+  <div class="content">
+    <div class="page3-hero"></div>
+    <div class="caption">Visual GIS NELAYA-AI digunakan sebagai konteks ruang baca, bukan sebagai titik navigasi atau instruksi melaut.</div>
+
+    <h1>Laut Aceh Bergerak Dinamis</h1>
+    <div class="deck">Menguat, menyempit, lalu kembali ke laut dalam.</div>
+
+    <div class="article-3col drop">
+      <p>Minggu 15–21 Juni 2026 memperlihatkan bahwa laut Aceh tidak bergerak dalam satu garis lurus. Ia membuka tanda, menguat, menyebar, menyempit, lalu bergeser kembali. Dalam tujuh hari pembacaan, NELAYA-AI mencatat enam hari dengan sinyal hotspot atau zona pemantauan.</p>
+
+      <p>Empat hari terbaca sebagai <i>operational_core_zone</i>, tiga hari sebagai <i>operational_strong_zone</i>. Rata-rata <i>mean operational score</i> berada pada 0,7428, dengan rata-rata confidence sekitar 0,9458.</p>
+
+      <p>Angka-angka itu penting, tetapi LAOT tidak membacanya sebagai kepastian. Ia dibaca sebagai pola. Yang ingin dipahami bukan hanya “berapa skornya”, melainkan “ke mana tanda itu bergerak”, “seberapa kuat ia bertahan”, dan “apa batas kehati-hatian yang harus dijaga”.</p>
+
+      <div class="section-title">Sinyal Awal dan Puncak Mingguan</div>
+      <p>Pada 15 Juni, sinyal masih muncul sebagai sel hotspot awal. Ia belum terbentuk sebagai zona operasional agregat. Top signal hari itu berada pada ACEH_067_043 dengan kelas hotspot_core, kedalaman sekitar 772 meter, dan mean operational score sekitar 0,6551.</p>
+
+      <p>Sehari kemudian, pada 16 Juni, pembacaan menguat. Sistem membaca tiga zona agregat. Zona utama HZ20260616_N001 berada pada status operational_core_zone dan menjadi puncak mingguan dengan mean operational score sekitar 0,8363.</p>
+
+      <p>Dalam bahasa sederhana, inilah hari ketika laut memberi tanda paling kuat dalam periode edisi perdana. Tetapi tanda yang kuat tetap bukan janji. Ia hanya memberi alasan untuk membaca ruang laut dengan lebih teliti.</p>
+    </div>
+  </div>
+
+  <div class="footer-strip">
+    <span>Laporan Utama</span>
+    <b>POLA · ZONA · KEHATI-HATIAN</b>
+    <span>Halaman 3</span>
+  </div>
+</section>
+
+<!-- PAGE 4 -->
+<section class="page">
+  <div class="header">
+    <div class="page-no">4</div>
+    <div class="title">LAPORAN UTAMA · LANJUTAN</div>
+    <div class="brand">L<span>A</span>OT</div>
+  </div>
+
+  <div class="content">
+    <div class="split">
+      <div>
+        <h2>Menyebar, lalu Menyempit</h2>
+        <div class="article-2col">
+          <p>Pada 17 Juni, jumlah zona meningkat menjadi enam. Peningkatan jumlah zona tidak otomatis berarti peluang lebih mudah ditangkap. Sebaliknya, ia menunjukkan bahwa sinyal menyebar dan perlu dibaca lebih hati-hati. Zona utama hari itu berada pada perairan dalam, dengan kedalaman rata-rata sekitar 1.675 meter dan mean operational score sekitar 0,7563.</p>
+
+          <p>Pada 18 dan 19 Juni, pola berubah. Sinyal menyempit menjadi satu zona kuat pada kelas shelf_50_200m, dengan kedalaman rata-rata sekitar 87,84 meter. Dua hari ini menunjukkan bahwa ruang baca laut bisa bergeser dari sebaran dalam menuju area yang lebih dangkal. Bagi LAOT, ini penting: laut tidak hanya menguat atau melemah, tetapi juga berpindah ruang.</p>
+
+          <div class="section-title">Kembali ke Laut Dalam</div>
+          <p>Pada 20 Juni, zona utama kembali bergerak ke laut dalam. HZ20260620_N001 terbaca sebagai operational_core_zone, dengan kedalaman rata-rata sekitar 1.893 meter dan mean operational score sekitar 0,8027.</p>
+
+          <p>Pada 21 Juni, sistem kembali membaca tiga zona, dengan HZ20260621_N001 sebagai zona utama berstatus operational_strong_zone, kedalaman rata-rata sekitar 1.181 meter, mean operational score 0,6994, dan confidence sekitar 0,87.</p>
+
+          <p>Pola ini memperkuat kesimpulan bahwa laut dalam menjadi panggung penting dinamika minggu ini. Tetapi sekali lagi, LAOT tidak menyebutnya sebagai lokasi tangkap pasti. Ia adalah ruang pemantauan, ruang baca, dan ruang kehati-hatian.</p>
+
+          <div class="section-title">Membaca dengan Rendah Hati</div>
+          <p>Data 15–18 Juni berasal dari archive backfill grid/hotspot. Data 19–21 Juni berasal dari capture harian endpoint LAOT dengan kualitas usable_with_caution. Artinya, pembacaan mingguan ini cukup bernilai sebagai narasi pola, tetapi tidak boleh digunakan sebagai instruksi navigasi atau jaminan hasil tangkapan.</p>
+
+          <p>Inilah posisi LAOT: membantu pembaca melihat tanda, bukan memaksa laut memberi jawaban. Di tangan nelayan, data bisa menjadi teman berpikir. Di tangan pemerintah, data bisa menjadi bahan perhatian. Di tangan akademisi, data bisa menjadi pintu riset. Tetapi keputusan akhir tetap harus mempertimbangkan keselamatan, pengalaman, dan kondisi lokal.</p>
+        </div>
+      </div>
+
+      <div>
+        <div class="factbox">
+          <h3>Data dan Fakta</h3>
+          <ol>
+            <li>Total hari terbaca: 7 hari.</li>
+            <li>Hari dengan sinyal/zona: 6 hari.</li>
+            <li>Operational core zone: 4 hari.</li>
+            <li>Operational strong zone: 3 hari.</li>
+            <li>Rata-rata mean operational score: 0,7428.</li>
+            <li>Rata-rata confidence: 0,9458.</li>
+            <li>Puncak score: 16 Juni 2026, HZ20260616_N001, 0,8363.</li>
+            <li>21 Juni: 3 zona, HZ20260621_N001, operational_strong_zone.</li>
+          </ol>
+        </div>
+
+        <div class="box">
+          <h3>Guardrail Redaksi</h3>
+          <ul>
+            <li>Hotspot bukan titik pasti penangkapan ikan.</li>
+            <li>FGI bukan jaminan hasil tangkapan.</li>
+            <li>Informasi LAOT bukan instruksi navigasi.</li>
+            <li>Keputusan lapangan tetap mempertimbangkan pengalaman nelayan, keselamatan, cuaca lokal, dan otoritas terkait.</li>
+          </ul>
+        </div>
+
+        <div class="note">
+          <b>Kalimat kunci:</b><br>
+          Laut Aceh minggu ini memberi satu pelajaran: peluang ada, tetapi laut meminta kehati-hatian.
+        </div>
+
+        <div class="timeline" style="margin-top:5mm">
+          <div><b>15 Juni</b> — Sinyal awal muncul sebagai sel hotspot.</div>
+          <div><b>16 Juni</b> — Puncak score mingguan.</div>
+          <div><b>17 Juni</b> — Zona menyebar menjadi enam.</div>
+          <div><b>18–19 Juni</b> — Sinyal menyempit ke shelf dangkal.</div>
+          <div><b>20–21 Juni</b> — Tanda kembali bergerak ke laut dalam.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-strip">
+    <span>Laporan Utama</span>
+    <b>DATA DAN FAKTA · BATAS BACA</b>
+    <span>Halaman 4</span>
+  </div>
+</section>
+
+</body>
+</html>
